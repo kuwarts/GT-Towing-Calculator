@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="GT Auto towing quote calculator">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="GT Towing">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>GT Auto Towing Calculator</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,900&display=swap">
+<style>
+/* Layout: one phone-height column like the iPhone calculator. Brand bar, big total, job chips (unit, vehicle, condition, conditions, three route legs), keypad. Sheets slide up for breakdown, fleet, jobs. Deliberately dark-only, in GT red / carbon / steel. */
+:root{
+  --bg:#000; --fg:#fff; --muted:#8c8c94; --soft:#d1d1d6; --key:#2b2b2f; --key-hi:#45454b;
+  --fn:#a5a5aa; --fn-ink:#000; --red:#e1030f; --red-hi:#ff2a35; --red-ink:#ff4d56;
+  --sheet:#141417; --row:#232327; --row-hi:#2f2f34; --line:#38383d; --field:#0c0c0e;
+  --good:#30d158; --warn:#ffb340; --bad:#ff453a;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Roboto,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--fg)}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--red-ink);outline-offset:2px}
+input{font:inherit;color:inherit;user-select:text;-webkit-user-select:text}
+
+.app{height:100%;max-width:430px;margin:0 auto;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:6px 12px}
+.top{display:flex;align-items:center;gap:6px;min-height:46px}
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.mark{display:flex;gap:3px;align-items:flex-start;padding-left:6px}
+.mark i{display:grid;place-items:center;height:22px;transform:skewX(-38.66deg);font:italic 900 15px/1 var(--sans);font-style:normal}
+.mark i b{transform:skewX(38.66deg);font-style:italic}
+.mark .g{width:30px;background:#fff;color:#020202;margin-top:3px}
+.mark .t{width:31px;background:var(--red);color:#fff}
+.word{font:italic 900 11px/1.05 var(--sans);text-transform:uppercase;letter-spacing:.04em;color:var(--soft)}
+.word span{color:var(--red-ink);display:block}
+.spacer{flex:1}
+.icon{width:38px;height:38px;border-radius:19px;display:grid;place-items:center;color:var(--red-ink)}
+.icon svg{width:22px;height:22px}
+.icon:active{background:var(--row)}
+.book-btn{height:34px;padding:0 15px;border-radius:17px;background:var(--red);color:#fff;font-weight:600;font-size:15px;transition:opacity .2s,transform .1s}
+.book-btn:disabled{opacity:.3}
+.book-btn:active{transform:scale(.96)}
+
+.display{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;text-align:right;gap:2px;padding:0 6px 4px}
+.meta{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.meta .warn{color:var(--warn)}
+.savestate{font-size:11px;color:var(--muted);margin-bottom:auto;padding-top:2px}
+.savestate.ok{color:var(--good)}.savestate.local{color:var(--warn)}
+.split{font-size:14px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;border-radius:12px;padding:3px 8px;margin-right:-8px;font-variant-numeric:tabular-nums;max-width:calc(100% + 8px)}
+.split>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.split:active{background:var(--row)}
+.split b{color:var(--soft);font-weight:500}
+.split .adj{color:var(--red-ink)}
+.total{font-weight:300;font-size:76px;line-height:1;letter-spacing:-.03em;white-space:nowrap;font-variant-numeric:tabular-nums;max-width:100%}
+.total .cur{font-size:.55em;color:var(--soft);margin-right:.05em;vertical-align:.18em}
+
+.chips{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
+.chip{grid-column:span 3;display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--sheet);border-radius:15px;padding:7px 12px;text-align:left;min-width:0;border:1.5px solid transparent;transition:border-color .2s,background .2s}
+.chip.km{grid-column:span 2}
+.chip:active{background:var(--row)}
+.chip small{font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;width:100%;white-space:nowrap}
+.chip>span{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.chip .val{font-variant-numeric:tabular-nums}
+.chip .val.empty{color:#4a4a50}
+.chip.on{border-color:var(--red)}
+.chip.on small{color:var(--red-ink)}
+.chip.flag{border-color:rgba(255,179,64,.55)}
+.chip.flag small{color:var(--warn)}
+.caret{margin-left:auto;opacity:.7}
+.chip .unit{color:var(--muted);font-weight:400;font-size:13px}
+.cursor{display:inline-block;width:2px;height:1em;background:var(--red-ink);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.pad{--ks:max(48px,min(78px,calc((min(100vw,430px) - 32px - 36px)/4),calc((100dvh - 545px)/5)));display:grid;grid-template-columns:repeat(4,1fr);gap:9px 12px;margin-top:10px;justify-items:center}
+.k{width:var(--ks);height:var(--ks);border-radius:50%;background:var(--key);font-size:32px;font-weight:400;display:grid;place-items:center;transition:background .25s,color .25s}
+.k:active{background:var(--key-hi);transition:none}
+.k.fn{background:var(--fn);color:var(--fn-ink);font-size:22px;font-weight:500}
+.k.fn:active{background:#d4d4d8}
+.k.op{background:var(--red);font-size:36px}
+.k.op:active{background:var(--red-hi)}
+.k.op.lit{background:#fff;color:var(--red)}
+.k.zero{grid-column:span 2;width:100%;border-radius:999px;justify-items:start;padding-left:calc(var(--ks)/2 - 10px)}
+.k.next{font-size:13px;font-weight:700;line-height:1.1;text-align:center}
+.k svg{width:28px;height:28px}
+
+/* sheets */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .35s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:430px;max-height:90%;background:var(--sheet);border-radius:14px 14px 0 0;z-index:21;display:flex;flex-direction:column;
+  transform:translateY(105%);transition:transform .42s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet.on{transform:none}
+.grab{padding:8px 0 2px;display:grid;place-items:center;touch-action:none}
+.grab i{width:36px;height:5px;border-radius:3px;background:#48484e;display:block}
+.sh-head{display:flex;align-items:center;padding:4px 16px 10px;gap:8px;touch-action:none}
+.sh-head h2{font-size:17px;font-weight:600;margin:0;flex:1;text-align:center}
+.sh-head .lbtn,.sh-head .rbtn{min-width:64px;color:var(--red-ink);font-size:17px}
+.sh-head .lbtn{text-align:left}.sh-head .rbtn{text-align:right;font-weight:600}
+.sh-body{overflow-y:auto;padding:0 16px 22px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.group{background:var(--row);border-radius:12px;overflow:hidden;margin-bottom:22px}
+.glabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:0 16px 6px;font-weight:500}
+.gnote{font-size:13px;color:var(--muted);padding:0 16px;margin:-14px 0 22px;line-height:1.4}
+.r{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 16px;position:relative;font-variant-numeric:tabular-nums}
+.r+.r::before,.r+.item::before,.item+.r::before,.item+.item::before{content:"";position:absolute;left:16px;right:0;top:0;border-top:.5px solid var(--line)}
+.r .n{flex:1;min-width:0;font-size:16px;line-height:1.25}
+.r .n .calc{display:block}
+.r .s{font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.r .v{font-size:16px;color:var(--muted);white-space:nowrap}
+.r.sum .n,.r.sum .v{color:var(--fg);font-weight:600}
+.r.big .v{font-size:22px;color:var(--red-ink);font-weight:700}
+.r.neg .v{color:var(--good)}
+button.r{width:100%;text-align:left}
+button.r:active{background:var(--row-hi)}
+.check{color:var(--red-ink);width:18px;text-align:right;font-weight:600}
+.badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.badge.best{background:rgba(225,3,15,.22);color:var(--red-ink)}
+.badge.ok{background:rgba(48,209,88,.16);color:var(--good)}
+.badge.no{background:rgba(255,179,64,.16);color:var(--warn)}
+.ed{width:92px;text-align:right;background:var(--field);border:1px solid transparent;border-radius:8px;padding:6px 8px;font-size:16px;font-variant-numeric:tabular-nums}
+.ed.w{width:116px}.ed.s{width:70px}
+.ed.mod{color:var(--red-ink);border-color:rgba(255,77,86,.4)}
+.ed::placeholder{color:#66666c}
+.txt{flex:1;min-width:0;text-align:left;background:transparent;border:0;font-size:16px;padding:8px 0}
+.calc{font-size:12px;color:var(--muted)}
+.sw{width:51px;height:31px;border-radius:16px;background:#3a3a40;position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.sw[aria-pressed="true"]{background:var(--red)}
+.sw[aria-pressed="true"]::after{transform:translateX(20px)}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:30px;height:30px;border-radius:15px;background:var(--row-hi);color:var(--red-ink);font-size:20px;line-height:1}
+.step b{min-width:18px;text-align:center;font-weight:600}
+.segs{display:flex;gap:6px;padding:10px 16px}
+.seg{flex:1;min-width:0;height:32px;border-radius:9px;background:#3a3a40;font-size:14px;font-weight:500}
+.seg.on{background:var(--red);color:#fff}
+.seg.del{flex:0 0 auto;padding:0 12px;color:var(--bad)}
+.seg.del.sure{background:var(--bad);color:#fff}
+.x{color:var(--bad);font-size:14px;font-weight:600;padding:4px 0}
+.add{color:var(--red-ink);font-size:16px}
+/* fleet editor items */
+.item{padding:10px 16px 12px;position:relative}
+.item-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.item-h b{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fgrid label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);min-width:0}
+.fgrid label.wide{grid-column:span 2}.fgrid label.full{grid-column:1/-1}
+.fgrid input{width:100%;background:var(--field);border:1px solid transparent;border-radius:8px;padding:7px 8px;font-size:15px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.pill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px}
+.pill.Dispatched{background:rgba(225,3,15,.2);color:var(--red-ink)}
+.pill.Completed{background:rgba(48,209,88,.16);color:var(--good)}
+.pill.Cancelled{background:#3a3a40;color:var(--muted)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.stat{background:var(--row);border-radius:12px;padding:12px 14px}
+.stat small{font-size:12px;color:var(--muted);display:block}
+.stat b{font-size:21px;font-weight:600;font-variant-numeric:tabular-nums}
+.empty-state{text-align:center;color:var(--muted);padding:26px 20px 30px;font-size:15px;line-height:1.4}
+.empty-state b{display:block;color:var(--fg);font-size:17px;margin-bottom:4px}
+.wide-btn{display:block;width:100%;height:50px;border-radius:12px;background:var(--red);color:#fff;font-size:17px;font-weight:600;margin-top:4px}
+.wide-btn.ghost{background:var(--row);color:var(--red-ink);font-weight:500}
+.wide-btn:active{opacity:.8}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translate(-50%,-160%);background:#2c2c30;color:#fff;padding:10px 18px;border-radius:999px;font-size:15px;font-weight:500;z-index:40;transition:transform .45s cubic-bezier(.32,.72,0,1);white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.on{transform:translate(-50%,0)}
+.toast .ok{color:var(--good);margin-right:6px}
+.sync{font-size:12px;color:#66666c;text-align:center;padding:6px 0 0}
+@media (max-height:740px){.total{font-size:62px}.k{font-size:28px}.chip{padding:5px 12px}.chip>span{font-size:14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="brand" aria-label="GT Auto Towing Calculator">
+      <div class="mark" aria-hidden="true"><i class="g"><b>G</b></i><i class="t"><b>T</b></i></div>
+      <div class="word">Towing<span>Calculator</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="icon" id="openJobs" aria-label="Jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor"/><circle cx="3.5" cy="12" r="1" fill="currentColor"/><circle cx="3.5" cy="18" r="1" fill="currentColor"/></svg></button>
+    <button class="icon" id="openRates" aria-label="Fleet and rates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    <button class="book-btn" id="bookBtn" disabled>Book</button>
+  </div>
+
+  <div class="display">
+    <div class="savestate ok" id="saveState">✓ Saved on this phone</div>
+    <div class="meta" id="meta">&nbsp;</div>
+    <button class="split" id="openBreak" aria-label="Price breakdown"><span id="split">&nbsp;</span><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" style="flex:none"><path d="M1.5 1.5l5 5-5 5"/></svg></button>
+    <div class="total" id="total"><span class="cur">₱</span>0</div>
+  </div>
+
+  <div class="chips">
+    <button class="chip" id="pickUnit"><small>Tow unit<span class="caret">▾</span></small><span id="unitName">—</span></button>
+    <button class="chip" id="pickClass"><small>Vehicle<span class="caret">▾</span></small><span id="className">—</span></button>
+    <button class="chip" id="pickCond"><small>Condition<span class="caret">▾</span></small><span id="condName">—</span></button>
+    <button class="chip" id="pickEnv"><small>Weather &amp; time<span class="caret">▾</span></small><span id="envName">—</span></button>
+    <button class="chip km" data-field="out"><small>To pickup</small><span><span class="val" id="v-out"></span> <span class="unit">km</span></span></button>
+    <button class="chip km" data-field="tow"><small>Towed</small><span><span class="val" id="v-tow"></span> <span class="unit">km</span></span></button>
+    <button class="chip km" data-field="back"><small>Return</small><span><span class="val" id="v-back"></span> <span class="unit">km</span></span></button>
+  </div>
+
+  <div class="pad" id="pad">
+    <button class="k fn" data-k="AC" id="acKey">AC</button>
+    <button class="k fn" data-k="BS" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5" stroke-linecap="round"/></svg></button>
+    <button class="k fn next" data-k="NEXT" id="nextKey">Next</button>
+    <button class="k op" data-k="/">÷</button>
+    <button class="k" data-k="7">7</button><button class="k" data-k="8">8</button><button class="k" data-k="9">9</button>
+    <button class="k op" data-k="*">×</button>
+    <button class="k" data-k="4">4</button><button class="k" data-k="5">5</button><button class="k" data-k="6">6</button>
+    <button class="k op" data-k="-">−</button>
+    <button class="k" data-k="1">1</button><button class="k" data-k="2">2</button><button class="k" data-k="3">3</button>
+    <button class="k op" data-k="+">+</button>
+    <button class="k zero" data-k="0">0</button><button class="k" data-k=".">.</button>
+    <button class="k op" data-k="=">=</button>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sPicker" aria-label="Choose"><div class="grab"><i></i></div>
+  <div class="sh-head"><span class="lbtn"></span><h2 id="pickerTitle">Choose</h2><button class="rbtn" data-close>Done</button></div>
+  <div class="sh-body" id="pickerBody"></div></section>
+<section class="sheet" id="sEnv" aria-label="Weather and time"><div class="grab"><i></i></div>
+  <div class="sh-head"><span class="lbtn"></span><h2>Weather &amp; time</h2><button class="rbtn" data-close>Done</button></div>
+  <div class="sh-body" id="envBody"></div></section>
+<section class="sheet" id="sBreak" aria-label="Price breakdown"><div class="grab"><i></i></div>
+  <div class="sh-head"><button class="lbtn" id="resetOv">Reset</button><h2>Breakdown</h2><button class="rbtn" data-close>Done</button></div>
+  <div class="sh-body" id="breakBody"></div></section>
+<section class="sheet" id="sRates" aria-label="Fleet and rates"><div class="grab"><i></i></div>
+  <div class="sh-head"><span class="lbtn"></span><h2>Fleet &amp; rates</h2><button class="rbtn" data-close>Done</button></div>
+  <div class="sh-body" id="ratesBody"></div></section>
+<section class="sheet" id="sBook" aria-label="New job"><div class="grab"><i></i></div>
+  <div class="sh-head"><button class="lbtn" data-close>Cancel</button><h2>New tow job</h2><span class="rbtn"></span></div>
+  <div class="sh-body" id="bookBody"></div></section>
+<section class="sheet" id="sJobs" aria-label="Jobs"><div class="grab"><i></i></div>
+  <div class="sh-head"><span class="lbtn"></span><h2>Tow jobs</h2><button class="rbtn" data-close>Done</button></div>
+  <div class="sh-body" id="jobsBody"></div></section>
+<datalist id="unitTypes"><option value="Wheel-lift"><option value="Flatbed"><option value="Heavy wrecker"><option value="Rotator"><option value="Motorcycle carrier"><option value="Light-duty boom"></datalist>
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const peso = (n,d=0) => (n<0?'−':'')+'₱'+Math.abs(Number(n)||0).toLocaleString('en-PH',{minimumFractionDigits:d,maximumFractionDigits:d});
+const num = (n,d=2) => (Number(n)||0).toLocaleString('en-PH',{maximumFractionDigits:d});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const LS = { get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}} };
+
+/* Sample starting rates. Replace with GT Auto's real figures in Fleet & rates. */
+const DEFAULT_RATES = {
+  units:[
+    {code:'GT-WL1',name:'Hook',type:'Wheel-lift',cap:3.5,base:2500,lkm:80,ekm:40,incl:10,kmpl:6},
+    {code:'GT-FB1',name:'Deck',type:'Flatbed',cap:4,base:3500,lkm:100,ekm:45,incl:10,kmpl:5},
+    {code:'GT-FB2',name:'Deck XL',type:'Flatbed',cap:8,base:5000,lkm:130,ekm:55,incl:10,kmpl:4},
+    {code:'GT-HW1',name:'Titan',type:'Heavy wrecker',cap:25,base:12000,lkm:250,ekm:110,incl:10,kmpl:2.5},
+    {code:'GT-MC1',name:'Moto',type:'Motorcycle carrier',cap:0.5,base:1500,lkm:50,ekm:25,incl:10,kmpl:9}],
+  classes:[{name:'Motorcycle',tons:0.3,mult:0.8},{name:'Car / sedan',tons:1.4,mult:1},{name:'SUV / pickup / van',tons:2.4,mult:1.15},{name:'Light truck',tons:4.5,mult:1.35},{name:'Heavy truck / bus',tons:15,mult:2}],
+  conds:[
+    {name:'Rolls and steers',fee:0,rec:'Wheel-lift, Flatbed, Motorcycle carrier'},
+    {name:"Won't start / no power",fee:500,rec:'Wheel-lift, Flatbed, Motorcycle carrier'},
+    {name:'Locked wheels / flat tires',fee:800,rec:'Flatbed, Motorcycle carrier'},
+    {name:'Accident damage',fee:1500,rec:'Flatbed, Heavy wrecker'},
+    {name:'Ditch or overturned (winch)',fee:3500,rec:'Heavy wrecker, Rotator, Flatbed'},
+    {name:'Flooded / submerged',fee:2500,rec:'Flatbed, Heavy wrecker'}],
+  weather:[{name:'Clear',pct:0},{name:'Rain',pct:10},{name:'Heavy rain / flood',pct:25},{name:'Typhoon signal',pct:40}],
+  extras:[{name:'Wheel dollies',price:800},{name:'Go-jacks / skates',price:600},{name:'Extra winch pull',price:1500},{name:'Spill clean-up',price:1000},{name:'Storage per day',price:500}],
+  discounts:[{name:'Insurance partner',pct:10},{name:'Fleet account',pct:15},{name:'Repeat customer',pct:5}],
+  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12}
+};
+const LISTS = {
+  units:{label:'Tow units',add:'Add tow unit',sel:'unit',key:'code',blank:{code:'',name:'',type:'Flatbed',cap:0,base:0,lkm:0,ekm:0,incl:0,kmpl:0},
+    fields:[['code','Code','t'],['name','Code name','t'],['type','Type','t','full'],['cap','Capacity (t)','n'],['base','Hook-up ₱','n'],['incl','Free km','n'],['lkm','Towed ₱/km','n'],['ekm','Empty ₱/km','n'],['kmpl','km per L','n']],
+    note:'Hook-up covers the first free km of towing. Towed ₱/km applies with the vehicle on board; empty ₱/km to the pickup and back. Diesel is billed separately from km per litre.'},
+  classes:{label:'Vehicle classes',add:'Add vehicle class',sel:'vclass',key:'name',blank:{name:'',tons:0,mult:1},
+    fields:[['name','Class','t','full'],['tons','Weight (t)','n'],['mult','Rate ×','n']],note:'Rate × multiplies the hook-up and towed km. Weight is checked against the unit capacity.'},
+  conds:{label:'Vehicle condition',add:'Add condition',sel:'cond',key:'name',blank:{name:'',fee:0,rec:''},
+    fields:[['name','Condition','t','full'],['fee','Fee ₱','n'],['rec','Suitable unit types','t','wide']],note:'Suitable types drive the Best fit and Recommended badges.'},
+  weather:{label:'Weather surcharge',add:'Add weather',sel:'weather',key:'name',blank:{name:'',pct:0},fields:[['name','Weather','t','wide'],['pct','Surcharge %','n']]},
+  extras:{label:'Equipment & extras',add:'Add extra',key:'name',blank:{name:'',price:0},fields:[['name','Item','t','wide'],['price','Price ₱','n']]},
+  discounts:{label:'Discounts',add:'Add discount',sel:'disc',key:'name',blank:{name:'',pct:0},fields:[['name','Discount','t','wide'],['pct','Off %','n']]}
+};
+const FEES = [['diesel','Diesel price','₱ per litre'],['night','Night differential','% added'],['nightFrom','Night starts','hour, 24h'],['nightTo','Night ends','hour, 24h'],['holiday','Sunday / holiday','% added'],['minCharge','Minimum charge','₱ per job'],['freeWait','Free waiting','minutes'],['waitRate','Waiting rate','₱ per hour'],['avgSpeed','Average speed','km/h, for time estimate'],['vat','VAT','%']];
+
+function normRates(r){ const d=clone(DEFAULT_RATES); r=r||{}; for(const k of Object.keys(LISTS)) d[k]=Array.isArray(r[k])?r[k].map(x=>({...x})):d[k]; d.fees={...d.fees,...(r.fees||{})}; return d; }
+let R = normRates(LS.get('gtt.rates', null));
+let jobs = LS.get('gtt.jobs', []);
+const DRAFT0 = {unit:'GT-FB1',vclass:'Car / sedan',cond:"Won't start / no power",weather:'Clear',night:'auto',holiday:false,
+  out:'8',tow:'22',back:'26',active:'tow',ret:true,stops:[],extras:{},wait:'',tolls:'',disc:'',adj:'',vat:false,ov:{}};
+const S = Object.assign(clone(DRAFT0), LS.get('gtt.draft', {}));
+S.ov=S.ov||{}; S.stops=S.stops||[]; S.extras=S.extras||{};
+const FIELDS=['out','tow','back'], FLABEL={out:'To pickup',tow:'Towed',back:'Return'};
+let fresh=false, db=null, openSheet=null;
+
+/* ---------- expression ---------- */
+const OPS={'+':1,'-':1,'*':2,'/':2};
+function ev(str){
+  const t=String(str||'').match(/\d*\.?\d+|\d+\.|[+\-*/]/g); if(!t) return 0;
+  while(t.length && OPS[t[t.length-1]]) t.pop();
+  const out=[],st=[];
+  for(const x of t){ if(OPS[x]){ while(st.length && OPS[st[st.length-1]]>=OPS[x]) out.push(st.pop()); st.push(x);} else out.push(parseFloat(x)); }
+  while(st.length) out.push(st.pop());
+  const s=[]; for(const x of out){ if(typeof x==='number') s.push(x); else { const b=s.pop()??0,a=s.pop()??0; s.push(x==='+'?a+b:x==='-'?a-b:x==='*'?a*b:(b?a/b:0)); } }
+  const r=s.pop(); return isFinite(r)?Math.round(r*1e6)/1e6:0;
+}
+const pretty=e=>String(e||'').replace(/\*/g,'×').replace(/\//g,'÷').replace(/-/g,'−');
+
+/* ---------- pricing ---------- */
+const find=(list,key,val)=>list.find(x=>x[key]===val)||list[0]||null;
+const unit=()=>find(R.units,'code',S.unit)||{code:'—',name:'',type:'',cap:0,base:0,lkm:0,ekm:0,incl:0,kmpl:0};
+const vcls=()=>find(R.classes,'name',S.vclass)||{name:'—',tons:0,mult:1};
+const cond=()=>find(R.conds,'name',S.cond)||{name:'—',fee:0,rec:''};
+const wthr=()=>find(R.weather,'name',S.weather)||{name:'Clear',pct:0};
+const disc=()=>R.discounts.find(x=>x.name===S.disc)||null;
+const ovv=(k,base)=>(S.ov[k]!==undefined&&S.ov[k]!==''&&!isNaN(+S.ov[k]))?+S.ov[k]:(+base||0);
+const types=c=>String(c.rec||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+function fitOf(u,c,v){ const rec=types(c), typeOk=!rec.length||rec.includes(String(u.type).toLowerCase()), capOk=(+u.cap||0)>=(+v.tons||0); return {typeOk,capOk,ok:typeOk&&capOk}; }
+function bestUnit(){ const c=cond(),v=vcls(); return R.units.filter(u=>u.code&&fitOf(u,c,v).ok).sort((a,b)=>(+a.cap)-(+b.cap)||(+a.base)-(+b.base))[0]||null; }
+function isNightHour(h){ const f=+R.fees.nightFrom, t=+R.fees.nightTo; return f>t ? (h>=f||h<t) : (h>=f&&h<t); }
+const nightOn=()=>S.night==='on'||(S.night==='auto'&&isNightHour(new Date().getHours()));
+
+function quote(){
+  const u=unit(), v=vcls(), c=cond(), w=wthr(), F=R.fees, d=disc();
+  const out=Math.max(0,ev(S.out)), tow=Math.max(0,ev(S.tow)), back=Math.max(0,ev(S.back));
+  const stopKm=S.stops.reduce((a,s)=>a+Math.max(0,ev(s.km)),0);
+  const loaded=tow+stopKm, empty=out+(S.ret?back:0), driven=out+loaded+back, charged=loaded+empty;
+  const mult=+v.mult||1;
+  const baseFee=ovv('base',u.base), lkm=ovv('lkm',u.lkm), ekm=ovv('ekm',u.ekm), incl=ovv('incl',u.incl), kmpl=ovv('kmpl',u.kmpl), diesel=ovv('diesel',F.diesel);
+  const hook=baseFee*mult, towed=Math.max(0,loaded-incl)*lkm*mult, deadhead=empty*ekm;
+  const litres=kmpl?charged/kmpl:0, fuel=litres*diesel;
+  const condFee=ovv('cond',c.fee);
+  const extras=R.extras.reduce((a,x)=>a+(+S.extras[x.name]||0)*(+x.price||0),0);
+  const waitMin=Math.max(0,ev(S.wait)), waiting=Math.max(0,waitMin-(+F.freeWait||0))/60*(+F.waitRate||0);
+  const sub=hook+towed+deadhead+fuel+condFee+extras+waiting;
+  const night=nightOn(), nPct=night?+F.night||0:0, wPct=+w.pct||0, hPct=S.holiday?+F.holiday||0:0;
+  const surcharge=sub*(nPct+wPct+hPct)/100;
+  const dPct=d?+d.pct||0:0, discount=(sub+surcharge)*dPct/100;
+  const adj=ev(S.adj);
+  let service=sub+surcharge-discount+adj, minUp=0;
+  if(loaded>0 && service<(+F.minCharge||0)){ minUp=(+F.minCharge)-service; service=+F.minCharge; }
+  const tolls=Math.max(0,ev(S.tolls)), net=service+tolls, vat=S.vat?net*(+F.vat||0)/100:0, total=net+vat;
+  const hours=(+F.avgSpeed?driven/(+F.avgSpeed):0)+0.5+waitMin/60;
+  const fit=fitOf(u,c,v);
+  return {u,v,c,w,d,out,tow,back,stopKm,loaded,empty,driven,charged,mult,baseFee,lkm,ekm,incl,kmpl,diesel,hook,towed,deadhead,litres,fuel,condFee,extras,waitMin,waiting,
+    sub,night,nPct,wPct,hPct,surcharge,dPct,discount,adj,minUp,service,tolls,vat,total,hours,fit,
+    run:hook+towed+deadhead, fees:condFee+extras+waiting+surcharge-discount+adj+minUp+tolls+vat, ready:loaded>0&&!!u.code};
+}
+const hm=h=>{ const m=Math.round(h*60); return m<60?`${m} min`:`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`; };
+
+/* ---------- main render ---------- */
+function fitTotal(){ const el=$('#total'); el.style.fontSize=''; let size=parseFloat(getComputedStyle(el).fontSize); const max=el.parentElement.clientWidth-12; while(el.scrollWidth>max&&size>30){ size-=4; el.style.fontSize=size+'px'; } }
+function envLabel(){ const parts=[S.weather||'Clear']; if(nightOn()) parts.push('Night'); if(S.holiday) parts.push('Holiday'); return parts.join(' · '); }
+function render(){
+  const q=quote();
+  $('#unitName').textContent=q.u.code+(q.u.name?' '+q.u.name:'');
+  $('#className').textContent=q.v.name; $('#condName').textContent=q.c.name; $('#envName').textContent=envLabel();
+  $('#pickUnit').classList.toggle('flag', !q.fit.ok);
+  for(const f of FIELDS){
+    const el=$('#v-'+f), on=S.active===f;
+    el.classList.toggle('empty',!S[f]);
+    el.innerHTML=(S[f]?esc(pretty(S[f])):'0')+(on?'<i class="cursor"></i>':'');
+    document.querySelector(`[data-field="${f}"]`).classList.toggle('on',on);
+  }
+  const nx=FIELDS[(FIELDS.indexOf(S.active)+1)%3];
+  $('#nextKey').innerHTML=esc(FLABEL[nx].replace('To pickup','Pickup'))+' ›';
+  $('#acKey').textContent=S[S.active]?'C':'AC';
+  const warn=!q.fit.capOk?'Over unit capacity':!q.fit.typeOk?'Unit not suited':'';
+  $('#meta').innerHTML=q.loaded>0
+    ? `${warn?`<span class="warn">⚠ ${warn}</span> · `:''}${esc(q.u.type)} · ${num(q.driven,1)} km · ~${hm(q.hours)}`
+    : 'Enter the towed distance';
+  const edited=Object.keys(S.ov).some(k=>S.ov[k]!=='') || q.adj || q.d;
+  $('#split').innerHTML=`<b>${peso(q.run)}</b> tow + <b>${peso(q.fuel)}</b> fuel + <b>${peso(q.fees)}</b> fees${edited?' <span class="adj">•</span>':''}`;
+  $('#total').innerHTML=`<span class="cur">₱</span>${Math.round(q.total).toLocaleString('en-PH')}`;
+  $('#bookBtn').disabled=!q.ready;
+  fitTotal();
+  LS.set('gtt.draft',S);
+  if(openSheet==='sBreak') updateOuts();
+}
+
+/* ---------- keypad ---------- */
+function press(k){
+  const f=S.active; let v=String(S[f]||'');
+  if(/^\d$/.test(k)){ if(fresh){v='';fresh=false;} const last=v.split(/[+\-*/]/).pop(); if(last==='0') v=v.slice(0,-1); if(v.length<14) v+=k; }
+  else if(k==='.'){ if(fresh){v='';fresh=false;} const last=v.split(/[+\-*/]/).pop(); if(!last.includes('.')) v+=last===''?'0.':'.'; }
+  else if(OPS[k]){ fresh=false; if(!v) v='0'; if(OPS[v.slice(-1)]) v=v.slice(0,-1); v+=k; }
+  else if(k==='='){ v=v?String(ev(v)):''; fresh=true; const nx=FIELDS[FIELDS.indexOf(f)+1]; if(nx&&!S[nx]){ S[f]=v; S.active=nx; fresh=false; render(); lit(''); return; } }
+  else if(k==='BS'){ fresh=false; v=v.slice(0,-1); }
+  else if(k==='AC'){ if(v){ v=''; } else { FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.active='out'; render(); lit(''); return; } }
+  else if(k==='NEXT'){ if(v) v=String(ev(v)); S[f]=v; S.active=FIELDS[(FIELDS.indexOf(f)+1)%3]; fresh=true; render(); lit(''); return; }
+  S[f]=v; render(); lit(v);
+}
+const lit=v=>document.querySelectorAll('.k.op').forEach(b=>b.classList.toggle('lit',!!OPS[b.dataset.k]&&v.slice(-1)===b.dataset.k));
+$('#pad').addEventListener('click',e=>{ const b=e.target.closest('[data-k]'); if(b) press(b.dataset.k); });
+document.addEventListener('keydown',e=>{
+  if(openSheet||e.target.tagName==='INPUT'){ if(e.key==='Escape') closeSheet(); return; }
+  const map={'Enter':'=','=':'=','Backspace':'BS','Escape':'AC','Tab':'NEXT','x':'*','X':'*'};
+  const k=map[e.key]||(/^[\d.+\-*/]$/.test(e.key)?e.key:null);
+  if(k){ e.preventDefault(); press(k); }
+});
+document.querySelectorAll('[data-field]').forEach(b=>b.addEventListener('click',()=>{ const f=b.dataset.field; if(S.active!==f){ if(S[S.active]) S[S.active]=String(ev(S[S.active])); S.active=f; fresh=true; render(); lit(''); } }));
+
+/* ---------- sheets ---------- */
+function showSheet(id){ if(openSheet) $('#'+openSheet).classList.remove('on'); openSheet=id; $('#'+id).classList.add('on'); $('#scrim').classList.add('on'); }
+function closeSheet(){ if(!openSheet) return; $('#'+openSheet).classList.remove('on'); $('#scrim').classList.remove('on'); const was=openSheet; openSheet=null; document.activeElement?.blur?.(); if(was==='sRates') saveRates(true); render(); }
+$('#scrim').addEventListener('click',closeSheet);
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheet));
+document.querySelectorAll('.sheet').forEach(sh=>{
+  let y0=null,dy=0;
+  [sh.querySelector('.grab'),sh.querySelector('.sh-head')].forEach(h=>{
+    h.addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; y0=e.clientY; dy=0; sh.style.transition='none'; h.setPointerCapture(e.pointerId); });
+    h.addEventListener('pointermove',e=>{ if(y0===null) return; dy=Math.max(0,e.clientY-y0); sh.style.transform=`translateY(${dy}px)`; });
+    const end=()=>{ if(y0===null) return; y0=null; sh.style.transition=''; sh.style.transform=''; if(dy>90) closeSheet(); };
+    h.addEventListener('pointerup',end); h.addEventListener('pointercancel',end);
+  });
+});
+
+/* pickers */
+const PICK={
+  unit:{title:'Tow unit',list:()=>R.units,key:'code'},
+  vclass:{title:'Vehicle being towed',list:()=>R.classes,key:'name'},
+  cond:{title:'Vehicle condition',list:()=>R.conds,key:'name'}
+};
+function openPicker(kind){
+  const P=PICK[kind], list=P.list().filter(x=>x[P.key]); $('#pickerTitle').textContent=P.title;
+  let rows, note='';
+  if(kind==='unit'){
+    const c=cond(), v=vcls(), best=bestUnit();
+    const sorted=[...list].sort((a,b)=>(fitOf(b,c,v).ok-fitOf(a,c,v).ok)||(+a.cap)-(+b.cap));
+    rows=sorted.map(u=>{ const f=fitOf(u,c,v); const badge=best&&u.code===best.code?'<span class="badge best">Best fit</span>':f.ok?'<span class="badge ok">Suitable</span>':`<span class="badge no">${f.capOk?'Not suited':'Too light'}</span>`;
+      return `<button class="r" data-v="${esc(u.code)}"><span class="n">${esc(u.code)} ${esc(u.name)}<span class="calc">${esc(u.type)} · ${num(u.cap)} t · ${peso(u.base)} hook-up · ${peso(u.lkm)}/km</span></span>${badge}<span class="check">${u.code===S.unit?'✓':''}</span></button>`; }).join('');
+    note=`Ranked for <b>${esc(v.name)}</b>, <b>${esc(c.name.toLowerCase())}</b>. The representative makes the final call after assessment.`;
+  } else if(kind==='vclass'){
+    rows=list.map(x=>`<button class="r" data-v="${esc(x.name)}"><span class="n">${esc(x.name)}<span class="calc">about ${num(x.tons)} t · rate × ${num(x.mult)}</span></span><span class="check">${x.name===S.vclass?'✓':''}</span></button>`).join('');
+  } else {
+    rows=list.map(x=>`<button class="r" data-v="${esc(x.name)}"><span class="n">${esc(x.name)}<span class="calc">${esc(x.rec||'Any unit')}</span></span><span class="s">${x.fee?'+'+peso(x.fee):'No fee'}</span><span class="check">${x.name===S.cond?'✓':''}</span></button>`).join('');
+  }
+  $('#pickerBody').innerHTML=(note?`<div class="gnote" style="margin:0 0 12px;padding:0 4px">${note}</div>`:'')+`<div class="group">${rows||'<div class="empty-state"><b>Nothing here yet</b>Add one in Fleet &amp; rates.</div>'}</div>`;
+  $('#pickerBody').onclick=e=>{ const b=e.target.closest('[data-v]'); if(!b) return;
+    const old=S[kind]; S[kind]=b.dataset.v;
+    if(kind==='unit'&&old!==S.unit) ['base','lkm','ekm','incl','kmpl'].forEach(k=>delete S.ov[k]);
+    if(kind==='cond'&&old!==S.cond) delete S.ov.cond;
+    b.parentElement.querySelectorAll('.check').forEach(c=>c.textContent=''); b.querySelector('.check').textContent='✓';
+    render();
+    if(kind!=='unit'){ const f=fitOf(unit(),cond(),vcls()); if(!f.ok){ const bu=bestUnit(); if(bu) toast(`Check unit · ${esc(bu.code)} fits best`); } }
+    setTimeout(closeSheet,160); };
+  showSheet('sPicker');
+}
+$('#pickUnit').addEventListener('click',()=>openPicker('unit'));
+$('#pickClass').addEventListener('click',()=>openPicker('vclass'));
+$('#pickCond').addEventListener('click',()=>openPicker('cond'));
+
+/* weather & time */
+function renderEnv(){
+  const F=R.fees, auto=isNightHour(new Date().getHours());
+  $('#envBody').innerHTML=`
+    <div class="glabel">Weather at pickup</div>
+    <div class="group">${R.weather.filter(w=>w.name).map(w=>`<button class="r" data-w="${esc(w.name)}"><span class="n">${esc(w.name)}</span><span class="s">${+w.pct?'+'+num(w.pct)+'%':'No surcharge'}</span><span class="check">${w.name===S.weather?'✓':''}</span></button>`).join('')}</div>
+    <div class="glabel">Night differential · +${num(F.night)}%</div>
+    <div class="group"><div class="segs">${['auto','on','off'].map(m=>`<button class="seg ${S.night===m?'on':''}" data-night="${m}">${m==='auto'?'Auto':m==='on'?'Night':'Day'}</button>`).join('')}</div></div>
+    <div class="gnote">Auto applies it from ${num(F.nightFrom)}:00 to ${num(F.nightTo)}:00 by this device's clock. Right now it is ${auto?'on':'off'}.</div>
+    <div class="group"><div class="r"><span class="n">Sunday or holiday<span class="calc">+${num(F.holiday)}% on service</span></span><button class="sw" data-tog="holiday" aria-pressed="${!!S.holiday}" aria-label="Sunday or holiday"></button></div></div>`;
+}
+$('#pickEnv').addEventListener('click',()=>{ renderEnv(); showSheet('sEnv'); });
+$('#envBody').addEventListener('click',e=>{
+  const w=e.target.closest('[data-w]'), n=e.target.closest('[data-night]'), t=e.target.closest('[data-tog]');
+  if(w) S.weather=w.dataset.w; else if(n) S.night=n.dataset.night; else if(t) S[t.dataset.tog]=!S[t.dataset.tog]; else return;
+  renderEnv(); render();
+});
+
+/* ---------- breakdown ---------- */
+function edRow(name,key,base,sub){ const v=S.ov[key], mod=v!==undefined&&v!=='';
+  return `<div class="r"><span class="n">${name}${sub?`<span class="calc">${sub}</span>`:''}</span><input class="ed ${mod?'mod':''}" inputmode="decimal" data-ov="${key}" id="ov-${key}" value="${mod?esc(v):''}" placeholder="${num(base)}" aria-label="${name}"></div>`; }
+function line(label,key,cls=''){ return `<div class="r ${cls}"><span class="n">${label}</span><span class="v" data-out="${key}"></span></div>`; }
+function outs(q){ return {
+  hook:peso(q.hook), hookc:`${peso(q.baseFee)} × ${num(q.mult)} (${esc(q.v.name)})`,
+  towed:peso(q.towed), towedc:`${num(Math.max(0,q.loaded-q.incl),1)} km after ${num(q.incl)} free × ${peso(q.lkm)} × ${num(q.mult)}`,
+  dead:peso(q.deadhead), deadc:`${num(q.empty,1)} km empty × ${peso(q.ekm)}${S.ret?'':' · return not charged'}`,
+  fuel:peso(q.fuel), fuelc:`${num(q.charged,1)} km ÷ ${num(q.kmpl)} km/L = ${num(q.litres,1)} L × ${peso(q.diesel,2)}`,
+  cond:peso(q.condFee), extras:peso(q.extras), wait:peso(q.waiting),
+  waitc:`${num(q.waitMin,0)} min, first ${num(R.fees.freeWait,0)} free`,
+  sub:peso(q.sub), sur:peso(q.surcharge), surc:[q.nPct?`night ${num(q.nPct)}%`:'',q.wPct?`${esc(q.w.name.toLowerCase())} ${num(q.wPct)}%`:'',q.hPct?`holiday ${num(q.hPct)}%`:''].filter(Boolean).join(' + ')||'none',
+  disc:peso(-q.discount), discc:q.d?`${esc(q.d.name)} ${num(q.dPct)}%`:'none',
+  adj:peso(q.adj), min:peso(q.minUp), tolls:peso(q.tolls), vat:peso(q.vat), total:peso(q.total),
+  loadedkm:num(q.loaded,1)+' km', drivenkm:num(q.driven,1)+' km', litres:num(q.litres,1)+' L', time:hm(q.hours),
+  perkm:q.loaded?peso(q.total/q.loaded,2):'—', perdriven:q.driven?peso(q.total/q.driven,2):'—'
+}; }
+function updateOuts(){ const o=outs(quote()); $('#breakBody').querySelectorAll('[data-out]').forEach(el=>{ const k=el.dataset.out; if(k in o) el.innerHTML=o[k]; }); }
+function renderBreak(){
+  const q=quote(), F=R.fees;
+  const stops=S.stops.map((s,i)=>`<div class="r"><input class="txt" data-stop="${i}:label" id="st-l-${i}" value="${esc(s.label)}" placeholder="Stop ${i+1} (e.g. shop)"><input class="ed s" inputmode="decimal" data-stop="${i}:km" id="st-k-${i}" value="${esc(s.km)}" placeholder="km"><button class="x" data-rmstop="${i}" aria-label="Remove stop">✕</button></div>`).join('');
+  const ex=R.extras.filter(x=>x.name).map(x=>{ const n=+S.extras[x.name]||0; return `<div class="r"><span class="n">${esc(x.name)}<span class="calc">${peso(x.price)} each</span></span><div class="step"><button data-ex="${esc(x.name)}" data-d="-1" aria-label="Less">−</button><b>${n}</b><button data-ex="${esc(x.name)}" data-d="1" aria-label="More">+</button></div></div>`; }).join('');
+  const ds=[{name:'',pct:0},...R.discounts.filter(d=>d.name)].map(d=>`<button class="r" data-disc="${esc(d.name)}"><span class="n">${d.name?esc(d.name):'No discount'}</span><span class="s">${d.name?num(d.pct)+'% off':''}</span><span class="check">${S.disc===d.name?'✓':''}</span></button>`).join('');
+  $('#breakBody').innerHTML=`
+    <div class="glabel">Route</div>
+    <div class="group">
+      <div class="r"><span class="n">To pickup<span class="calc">Base to the vehicle, empty</span></span><span class="v">${num(q.out,1)} km</span></div>
+      <div class="r"><span class="n">Towed<span class="calc">Pickup to first drop-off</span></span><span class="v">${num(q.tow,1)} km</span></div>
+      ${stops}
+      <button class="r add" id="addStop">＋ Add another drop-off leg</button>
+      <div class="r"><span class="n">Return<span class="calc">Last drop-off back to base</span></span><span class="v">${num(q.back,1)} km</span></div>
+      <div class="r"><span class="n">Charge the return trip</span><button class="sw" data-tog="ret" aria-pressed="${!!S.ret}" aria-label="Charge the return trip"></button></div>
+    </div>
+    <div class="glabel">${esc(q.u.code)} ${esc(q.u.name)} · ${esc(q.u.type)}</div>
+    <div class="group">
+      ${edRow('Hook-up fee','base',q.u.base,'₱ per job')}
+      ${edRow('Free km','incl',q.u.incl,'included in hook-up')}
+      ${edRow('Towed rate','lkm',q.u.lkm,'₱ per km, loaded')}
+      ${edRow('Empty rate','ekm',q.u.ekm,'₱ per km, to pickup and back')}
+      ${edRow('Fuel economy','kmpl',q.u.kmpl,'km per litre')}
+      ${edRow('Diesel price','diesel',F.diesel,'₱ per litre, today')}
+      ${edRow('Condition fee','cond',q.c.fee,esc(q.c.name))}
+    </div>
+    <div class="glabel">Equipment &amp; extras</div>
+    <div class="group">${ex||'<div class="r"><span class="n calc">Add extras in Fleet &amp; rates.</span></div>'}</div>
+    <div class="group">
+      <div class="r"><span class="n">Waiting time<span class="calc">minutes on site</span></span><input class="ed" inputmode="decimal" data-s="wait" id="in-wait" value="${esc(S.wait)}" placeholder="0"></div>
+      <div class="r"><span class="n">Tolls &amp; parking<span class="calc">passed through at cost</span></span><input class="ed" inputmode="decimal" data-s="tolls" id="in-tolls" value="${esc(S.tolls)}" placeholder="₱0"></div>
+    </div>
+    <div class="glabel">Discount</div>
+    <div class="group">${ds}</div>
+    <div class="group">
+      <div class="r"><span class="n">Manual adjustment<span class="calc">use − to take off</span></span><input class="ed w ${S.adj?'mod':''}" inputmode="text" data-s="adj" id="in-adj" value="${esc(S.adj)}" placeholder="₱0"></div>
+      <div class="r"><span class="n">Add VAT<span class="calc">${num(F.vat)}% on the total</span></span><button class="sw" data-tog="vat" aria-pressed="${!!S.vat}" aria-label="Add VAT"></button></div>
+    </div>
+    <div class="glabel">Quote</div>
+    <div class="group">
+      <div class="r"><span class="n">Hook-up<span class="calc" data-out="hookc"></span></span><span class="v" data-out="hook"></span></div>
+      <div class="r"><span class="n">Towed distance<span class="calc" data-out="towedc"></span></span><span class="v" data-out="towed"></span></div>
+      <div class="r"><span class="n">Empty running<span class="calc" data-out="deadc"></span></span><span class="v" data-out="dead"></span></div>
+      <div class="r"><span class="n">Fuel<span class="calc" data-out="fuelc"></span></span><span class="v" data-out="fuel"></span></div>
+      ${line('Condition fee','cond')}${line('Equipment &amp; extras','extras')}
+      <div class="r"><span class="n">Waiting<span class="calc" data-out="waitc"></span></span><span class="v" data-out="wait"></span></div>
+      ${line('Subtotal','sub','sum')}
+      <div class="r"><span class="n">Surcharges<span class="calc" data-out="surc"></span></span><span class="v" data-out="sur"></span></div>
+      <div class="r neg"><span class="n">Discount<span class="calc" data-out="discc"></span></span><span class="v" data-out="disc"></span></div>
+      ${line('Adjustment','adj')}
+      <div class="r"><span class="n">Minimum charge top-up<span class="calc">minimum ${peso(F.minCharge)}</span></span><span class="v" data-out="min"></span></div>
+      ${line('Tolls &amp; parking','tolls')}${line('VAT','vat')}
+      <div class="r big"><span class="n" style="font-weight:600">Total</span><span class="v" data-out="total"></span></div>
+    </div>
+    <div class="glabel">Job metrics</div>
+    <div class="group">
+      ${line('Towed distance','loadedkm')}${line('Total driven','drivenkm')}${line('Diesel used','litres')}${line('Estimated job time','time')}
+      ${line('Price per towed km','perkm')}${line('Price per km driven','perdriven')}
+    </div>
+    <div class="gnote" style="margin-top:-12px">Changes here apply to this quote only. Grey numbers are your saved rates.</div>
+    <button class="wide-btn ghost" id="saveDefaults">Save changed rates as default</button>`;
+  updateOuts();
+}
+$('#openBreak').addEventListener('click',()=>{ renderBreak(); showSheet('sBreak'); });
+$('#breakBody').addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.ov){ S.ov[t.dataset.ov]=t.value.replace(/[^\d.]/g,''); t.classList.toggle('mod',t.value!==''); }
+  else if(t.dataset.s){ S[t.dataset.s]=t.dataset.s==='adj'?t.value.replace(/[^\d.+\-]/g,''):t.value.replace(/[^\d.]/g,''); if(t.dataset.s==='adj') t.classList.toggle('mod',!!S.adj); }
+  else if(t.dataset.stop){ const [i,k]=t.dataset.stop.split(':'); S.stops[+i][k]=k==='km'?t.value.replace(/[^\d.]/g,''):t.value; }
+  render();
+});
+$('#breakBody').addEventListener('click',e=>{
+  const tg=e.target.closest('[data-tog]'), ex=e.target.closest('[data-ex]'), ds=e.target.closest('[data-disc]'), rm=e.target.closest('[data-rmstop]');
+  if(tg){ S[tg.dataset.tog]=!S[tg.dataset.tog]; }
+  else if(ex){ const n=Math.max(0,(+S.extras[ex.dataset.ex]||0)+(+ex.dataset.d)); if(n) S.extras[ex.dataset.ex]=n; else delete S.extras[ex.dataset.ex]; }
+  else if(ds){ S.disc=ds.dataset.disc; }
+  else if(rm){ S.stops.splice(+rm.dataset.rmstop,1); }
+  else if(e.target.id==='addStop'){ S.stops.push({label:'',km:''}); renderBreak(); render(); $('#st-k-'+(S.stops.length-1))?.focus(); return; }
+  else if(e.target.id==='saveDefaults'){
+    const u=R.units.find(x=>x.code===S.unit), c=R.conds.find(x=>x.name===S.cond); let n=0;
+    for(const k of ['base','lkm','ekm','incl','kmpl']) if(S.ov[k]!==undefined&&S.ov[k]!==''&&u){ u[k]=+S.ov[k]; n++; }
+    if(S.ov.diesel){ R.fees.diesel=+S.ov.diesel; n++; }
+    if(S.ov.cond!==undefined&&S.ov.cond!==''&&c){ c.fee=+S.ov.cond; n++; }
+    if(!n){ toast('No rate changes to save'); return; }
+    S.ov={}; saveRates(true); toast(`Saved ${n} rate${n>1?'s':''} as default`);
+  } else return;
+  renderBreak(); render();
+});
+$('#resetOv').addEventListener('click',()=>{ S.ov={}; S.adj=''; S.disc=''; S.extras={}; S.wait=''; S.tolls=''; S.stops=[]; S.vat=false; S.ret=true; renderBreak(); render(); });
+
+/* ---------- fleet & rates ---------- */
+function renderRates(){
+  let html='';
+  for(const [lk,L] of Object.entries(LISTS)){
+    const items=R[lk].map((it,i)=>`<div class="item"><div class="item-h"><b>${esc(lk==='units'?((it.code||'New unit')+(it.name?' · '+it.name:'')):(it.name||'New'))}</b><button class="x" data-del="${lk}:${i}">Remove</button></div>
+      <div class="fgrid">${L.fields.map(([k,lab,ty,span])=>`<label class="${span||''}">${lab}<input id="f-${lk}-${i}-${k}" data-f="${lk}:${i}:${k}" ${ty==='n'?'inputmode="decimal"':''} ${k==='type'?'list="unitTypes"':''} value="${esc(it[k]??'')}"></label>`).join('')}</div></div>`).join('');
+    html+=`<div class="glabel">${L.label}</div><div class="group">${items}<button class="r add" data-addrow="${lk}">＋ ${L.add}</button></div>${L.note?`<div class="gnote">${L.note}</div>`:''}`;
+  }
+  html+=`<div class="glabel">Fuel, time &amp; fees</div><div class="group">${FEES.map(([k,lab,sub])=>`<div class="r"><span class="n">${lab}<span class="calc">${sub}</span></span><input class="ed" inputmode="decimal" id="fee-${k}" data-fee="${k}" value="${esc(R.fees[k])}"></div>`).join('')}</div>
+    <div class="gnote">Saved jobs keep the price they were quoted at.</div>
+    <div class="glabel">This phone</div>
+    <div class="group">
+      <button class="r add" id="installApp" ${installEvt?'':'hidden'}>Install as app on this phone</button>
+      <button class="r add" id="exportData">Back up rates and jobs</button>
+      <button class="r add" id="importData">Restore from a backup file</button>
+    </div>
+    <div class="gnote">Everything is saved on this phone only. Back up once a week and keep the file in Google Drive or Messenger. Restore it on a new phone to move your data.</div>
+    <button class="wide-btn ghost" id="resetRates">Restore sample rates</button><div class="sync" id="syncNote"></div>`;
+  $('#ratesBody').innerHTML=html; syncNote();
+}
+$('#openRates').addEventListener('click',()=>{ renderRates(); showSheet('sRates'); });
+$('#ratesBody').addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.fee){ R.fees[t.dataset.fee]=+t.value.replace(/[^\d.]/g,'')||0; saveRates(); return; }
+  if(!t.dataset.f) return;
+  const [lk,i,k]=t.dataset.f.split(':'), L=LISTS[lk], row=R[lk][+i], isNum=L.fields.find(f=>f[0]===k)[2]==='n';
+  if(isNum){ row[k]=+t.value.replace(/[^\d.]/g,'')||0; }
+  else { const old=row[k]; row[k]=t.value;
+    if(k===L.key){ if(L.sel&&S[L.sel]===old) S[L.sel]=t.value; if(lk==='extras'&&S.extras[old]){ S.extras[t.value]=S.extras[old]; delete S.extras[old]; } }
+    const h=t.closest('.item').querySelector('.item-h b'); h.textContent=lk==='units'?((row.code||'New unit')+(row.name?' · '+row.name:'')):(row.name||'New'); }
+  saveRates();
+});
+let delArm=null;
+$('#ratesBody').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]');
+  if(d){ if(delArm!==d.dataset.del){ delArm=d.dataset.del; d.textContent='Tap to confirm'; setTimeout(()=>{ if(delArm===d.dataset.del){ delArm=null; if(d.isConnected) d.textContent='Remove'; } },2500); return; }
+    delArm=null; const [lk,i]=d.dataset.del.split(':'); R[lk].splice(+i,1); saveRates(true); renderRates(); render(); return; }
+  if(ad){ const lk=ad.dataset.addrow; R[lk].push(clone(LISTS[lk].blank)); renderRates(); $(`#f-${lk}-${R[lk].length-1}-${LISTS[lk].fields[0][0]}`)?.focus(); return; }
+  if(e.target.id==='resetRates'){ if(e.target.dataset.sure){ R=normRates(null); saveRates(true); renderRates(); render(); toast('Sample rates restored'); } else { e.target.dataset.sure='1'; e.target.textContent='Tap again to restore'; } }
+});
+
+/* ---------- booking ---------- */
+function nextRef(){ const m=jobs.reduce((a,b)=>Math.max(a,parseInt(String(b.ref).replace(/\D/g,''),10)||0),0); return 'TW-'+String(m+1).padStart(4,'0'); }
+$('#bookBtn').addEventListener('click',()=>{
+  const q=quote(); if(!q.ready) return;
+  $('#bookBody').innerHTML=`
+    <div class="group">
+      <div class="r big"><span class="n" style="font-weight:600">${nextRef()}</span><span class="v">${peso(q.total)}</span></div>
+      <div class="r"><span class="n">${esc(q.u.code)} ${esc(q.u.name)}<span class="calc">${esc(q.u.type)}</span></span><span class="s">${num(q.driven,1)} km · ~${hm(q.hours)}</span></div>
+      <div class="r"><span class="n">${esc(q.v.name)}<span class="calc">${esc(q.c.name)} · ${esc(envLabel())}</span></span></div>
+    </div>
+    <div class="group">
+      <div class="r"><input class="txt" id="bkCust" placeholder="Customer name" autocomplete="off"></div>
+      <div class="r"><input class="txt" id="bkPhone" placeholder="Contact number" inputmode="tel" autocomplete="off"></div>
+      <div class="r"><input class="txt" id="bkPlate" placeholder="Plate number and vehicle model" autocomplete="off"></div>
+      <div class="r"><input class="txt" id="bkFrom" placeholder="Pickup location" autocomplete="off"></div>
+      <div class="r"><input class="txt" id="bkTo" placeholder="Drop-off location" autocomplete="off"></div>
+    </div>
+    <div class="gnote" style="margin-top:-12px">All optional. Saved with today's date and time.</div>
+    <button class="wide-btn" id="bkConfirm">Dispatch job</button>`;
+  showSheet('sBook');
+});
+$('#bookBody').addEventListener('click',async e=>{
+  if(e.target.id!=='bkConfirm') return;
+  const btn=e.target; btn.disabled=true; const q=quote(), ref=nextRef(), v=id=>$(id).value.trim(), r2=n=>Math.round(n*100)/100;
+  const rec={ref,at:new Date().toISOString(),customer:v('#bkCust'),phone:v('#bkPhone'),plate:v('#bkPlate'),pickup:v('#bkFrom'),dropoff:v('#bkTo'),
+    unit:q.u.code+(q.u.name?' '+q.u.name:''),unitType:q.u.type,vehicle:q.v.name,condition:q.c.name,weather:q.w.name,night:q.night,holiday:!!S.holiday,
+    kmOut:q.out,kmTowed:r2(q.loaded),kmBack:q.back,kmDriven:r2(q.driven),stops:S.stops.length,litres:r2(q.litres),
+    tow:r2(q.run),fuel:r2(q.fuel),fees:r2(q.fees),discount:q.d?q.d.name:'',total:r2(q.total),status:'Dispatched'};
+  if(!(await putJob(rec))){ btn.disabled=false; return; }
+  FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.active='out';
+  closeSheet(); toast(`<span class="ok">✓</span>${ref} dispatched · ${peso(rec.total)}`);
+});
+
+/* ---------- jobs ---------- */
+let expanded=null, delSure=null;
+const mk=d=>{ const x=new Date(d); return x.getFullYear()*12+x.getMonth(); };
+function renderJobs(){
+  const now=mk(new Date()), mo=jobs.filter(b=>b.status!=='Cancelled'&&mk(b.at)===now);
+  const stats=`<div class="stats"><div class="stat"><small>This month</small><b>${peso(mo.reduce((a,b)=>a+(+b.total||0),0))}</b></div><div class="stat"><small>Tows · km towed</small><b>${mo.length} · ${num(mo.reduce((a,b)=>a+(+b.kmTowed||0),0),0)}</b></div></div>`;
+  if(!jobs.length){ $('#jobsBody').innerHTML=stats+`<div class="group"><div class="empty-state"><b>No tow jobs yet</b>Price a tow, tap Book, and the job shows up here.</div></div><div class="sync" id="syncNote"></div>`; syncNote(); return; }
+  const fmt=d=>new Date(d).toLocaleString('en-PH',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const rows=jobs.map(b=>`<button class="r" data-ref="${esc(b.ref)}"><span class="n">${esc(b.customer||b.plate||b.vehicle)}<span class="calc">${esc(b.ref)} · ${fmt(b.at)} · ${esc(b.unit)}</span></span><span class="pill ${esc(b.status)}">${esc(b.status)}</span><span class="v" style="color:var(--fg);min-width:74px;text-align:right">${peso(b.total)}</span></button>
+    ${expanded===b.ref?`<div style="padding:0 16px 10px;line-height:1.5" class="calc">${esc(b.vehicle)} · ${esc(b.condition)}${b.plate?' · '+esc(b.plate):''}<br>${b.pickup||b.dropoff?esc(b.pickup||'?')+' → '+esc(b.dropoff||'?')+'<br>':''}${num(b.kmTowed,1)} km towed · ${num(b.kmDriven,1)} km driven · ${num(b.litres,1)} L<br>Tow ${peso(b.tow)} · Fuel ${peso(b.fuel)} · Fees ${peso(b.fees)}${b.discount?' · '+esc(b.discount):''}${b.phone?'<br>'+esc(b.phone):''}</div>
+    <div class="segs" style="padding-top:0">${['Dispatched','Completed','Cancelled'].map(s=>`<button class="seg ${b.status===s?'on':''}" data-status="${s}" data-for="${esc(b.ref)}">${s}</button>`).join('')}<button class="seg del ${delSure===b.ref?'sure':''}" data-deljob="${esc(b.ref)}">${delSure===b.ref?'Delete?':'Delete'}</button></div>`:''}`).join('');
+  $('#jobsBody').innerHTML=stats+`<div class="group">${rows}</div><button class="wide-btn ghost" id="copySheets">Copy all for Google Sheets</button><div class="gnote" style="margin:8px 0 0">Tab-separated, one job per row, oldest first.</div><div class="sync" id="syncNote"></div>`;
+  syncNote();
+}
+$('#openJobs').addEventListener('click',()=>{ renderJobs(); showSheet('sJobs'); });
+$('#jobsBody').addEventListener('click',async e=>{
+  const r=e.target.closest('[data-ref]'), st=e.target.closest('[data-status]'), del=e.target.closest('[data-deljob]');
+  if(st){ const b=jobs.find(x=>x.ref===st.dataset.for); if(b&&b.status!==st.dataset.status){ b.status=st.dataset.status; await patchJob(b.ref,{status:b.status}); renderJobs(); } return; }
+  if(del){ const ref=del.dataset.deljob; if(delSure!==ref){ delSure=ref; renderJobs(); return; } delSure=null; expanded=null; await removeJob(ref); renderJobs(); toast(`${esc(ref)} deleted`); return; }
+  if(r){ expanded=expanded===r.dataset.ref?null:r.dataset.ref; delSure=null; renderJobs(); return; }
+  if(e.target.id==='copySheets'){
+    const f=d=>{ const x=new Date(d),p=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${p(x.getMonth()+1)}-${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`; };
+    const clean=s=>String(s??'').replace(/[\t\n]/g,' ');
+    const head=['Ref','Date','Customer','Phone','Plate','Pickup','Drop-off','Unit','Unit type','Vehicle','Condition','Weather','Night','km to pickup','km towed','km return','km driven','Diesel L','Tow ₱','Fuel ₱','Fees ₱','Discount','Total ₱','Status'];
+    const tsv=[head.join('\t'),...[...jobs].reverse().map(b=>[b.ref,f(b.at),b.customer,b.phone,b.plate,b.pickup,b.dropoff,b.unit,b.unitType,b.vehicle,b.condition,b.weather,b.night?'Yes':'No',b.kmOut,b.kmTowed,b.kmBack,b.kmDriven,b.litres,b.tow,b.fuel,b.fees,b.discount,b.total,b.status].map(clean).join('\t'))].join('\n');
+    try{ await navigator.clipboard.writeText(tsv); toast('<span class="ok">✓</span>Copied '+jobs.length+' jobs'); }
+    catch(err){ const ta=document.createElement('textarea'); ta.value=tsv; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('Copied'); }catch(_){ toast('Copy not allowed here'); } ta.remove(); }
+  }
+});
+
+/* ---------- storage: this phone (localStorage), with backup files ---------- */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; const b=$('#installApp'); if(b) b.hidden=false; });
+window.addEventListener('appinstalled',()=>{ installEvt=null; toast('<span class="ok">✓</span>GT Towing installed'); });
+function ago(t){ if(!t) return 'never'; const d=Math.floor((Date.now()-t)/86400000); return d<=0?'today':d===1?'yesterday':d+' days ago'; }
+function syncNote(){ const n=$('#syncNote'); if(n) n.textContent='Saved on this phone · last backup '+ago(LS.get('gtt.lastBackup',0)); }
+function saveRates(){ LS.set('gtt.rates',R); }
+async function putJob(rec){ jobs=[rec,...jobs.filter(b=>b.ref!==rec.ref)]; LS.set('gtt.jobs',jobs); return true; }
+async function patchJob(){ LS.set('gtt.jobs',jobs); }
+async function removeJob(ref){ jobs=jobs.filter(b=>b.ref!==ref); LS.set('gtt.jobs',jobs); }
+function setSave(cls,txt){ const el=$('#saveState'); if(el){ el.className='savestate '+cls; el.textContent=txt; } }
+function exportData(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  const blob=new Blob([JSON.stringify({app:'gt-towing',version:1,savedAt:d.toISOString(),rates:R,jobs},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`gt-towing-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  LS.set('gtt.lastBackup',Date.now()); syncNote(); toast('<span class="ok">✓</span>Backup saved to Downloads');
+}
+$('#importFile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{ const d=JSON.parse(await f.text()); if(d.app!=='gt-towing'||!d.rates) throw 0;
+    R=normRates(d.rates); jobs=Array.isArray(d.jobs)?d.jobs:[]; saveRates(); LS.set('gtt.jobs',jobs);
+    renderRates(); render(); toast(`<span class="ok">✓</span>Restored ${jobs.length} job${jobs.length===1?'':'s'}`);
+  }catch(_){ toast('That file is not a GT Towing backup'); }
+});
+$('#ratesBody').addEventListener('click',async e=>{
+  if(e.target.id==='exportData') exportData();
+  else if(e.target.id==='importData') $('#importFile').click();
+  else if(e.target.id==='installApp'&&installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(_){} installEvt=null; e.target.hidden=true; }
+});
+async function boot(){
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  try{ LS.set('gtt.probe',1); if(localStorage.getItem('gtt.probe')!=='1') throw 0; }catch(_){ setSave('local','⚠ This browser is not saving. Open it in Chrome.'); return; }
+  try{ if(navigator.storage?.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); }catch(_){}
+}
+
+let tt=null;
+function toast(html){ const t=$('#toast'); t.innerHTML=html; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2400); }
+window.addEventListener('resize',fitTotal);
+setInterval(()=>{ if(S.night==='auto'&&!openSheet) render(); },60000);
+render(); boot();
+})();
+</script>
+
+</body>
+</html>
