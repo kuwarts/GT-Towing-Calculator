@@ -1,61 +1,57 @@
-GT AUTO TOWING CALCULATOR – FREE APP SETUP
-==========================================
+GT AUTO TOWING CALCULATOR
+=========================
+Live app: https://kuwarts.github.io/GT-Towing-Calculator/
 
-What is in this folder
-- index.html ............ the calculator
-- manifest.webmanifest .. app name, icon and colours
+FILES (all sit together in the main folder, no sub-folders)
+- index.html ............ the app screens
+- finance.js ............ the money formulas (cost, profit, markup, margin)
 - sw.js ................. lets the app open without internet
-- icons/ ................ GT app icons
-Keep all files together. Do not rename them.
+- manifest.webmanifest .. app name, icon and colours
+- icon-192.png, icon-512.png, maskable-512.png, apple-touch-icon.png .. GT logo icons
 
 
-STEP 1 – PUT IT ONLINE (free, about 10 minutes, use a computer)
----------------------------------------------------------------
-Option A: Netlify (easiest)
-1. Unzip this file so you have a folder called "gt-towing-app".
-2. Go to netlify.com and sign up free (you can use your Gmail).
-3. In Netlify, choose to add a new site and deploy manually
-   (the drag-and-drop option).
-4. Drag the whole "gt-towing-app" folder onto the page.
-5. Netlify gives you a link like https://something-random.netlify.app
-6. Optional: in Site settings, change the site name to something like
-   gt-towing so the link becomes https://gt-towing.netlify.app
+HOW THE NUMBERS WORK
+--------------------
+Rate card price  = hook-up + towed km + empty km + fuel charge + fees (your rate settings)
+Quoted price     = your own price if you type one, otherwise the rate card price
 
-Option B: GitHub Pages
-1. Sign up free at github.com.
-2. Create a new public repository, e.g. "gt-towing".
-3. Upload all files from the folder (keep the icons folder).
-4. Settings > Pages > Source: deploy from branch "main", folder "/ (root)".
-5. After a minute your link is https://YOUR-NAME.github.io/gt-towing/
+Estimated cost (per job):
+  Diesel       = total km driven ÷ km per litre × diesel price
+                 (always the full trip: to pickup + towed + return)
+  Crew         = (basic + meal) × number of shifts
+                 shifts = job hours ÷ shift length, rounded up (16 h ÷ 8 h = 2)
+                 Driver ₱650 + ₱150 = ₱800 per shift; Helper ₱500 + ₱150 = ₱650 per shift
+  Tolls        = what you enter for the job
+  Trip costs   = your own lines, per trip or per km
+                 "Cash paid" lines = money spent on the trip
+                 "Set aside" lines = maintenance, tires, depreciation reserves
+                 (counted in the cost, not paid on the day)
 
+Break-even       = total cost
+Markup price     = cost × (1 + markup %)      markup = profit as % of cost
+Margin price     = cost ÷ (1 − margin %)      margin = profit as % of price
+                   (margin must be below 100%; 25% markup = 20% margin)
+Profit           = price (without VAT) − cost
+Actual profit    = amount collected − actual cost. Only called "actual"
+                   when every cash cost and the payment are entered.
 
-STEP 2 – INSTALL ON YOUR ANDROID PHONE
---------------------------------------
-1. Open the link from Step 1 in Chrome.
-2. Tap the three dots (top right) > "Install app" or "Add to Home screen".
-   (Or open Fleet & rates inside the calculator and tap
-   "Install as app on this phone" when it appears.)
-3. The GT Towing icon is now on your home screen. It opens full screen
-   and works without internet after the first open.
-Do the same on every staff phone.
-
-
-STEP 3 – KEEP YOUR DATA SAFE
-----------------------------
-- Your rates and jobs are saved on each phone. They stay after you close
-  the app.
-- They are lost only if you uninstall the app or clear Chrome's data.
-- Once a week: Fleet & rates > "Back up rates and jobs". A file goes to
-  Downloads. Send it to yourself on Messenger or save it in Google Drive.
-- New phone: install the app, then "Restore from a backup file".
-- To give staff the same rates: back up on your phone, send the file,
-  and restore it on their phone.
+Reference check (Daraga → Goa → Daet → Daraga, 422.5 km, ₱98/L, 4.5 km/L):
+  93.8889 L diesel = ₱9,201.11; crew 2 shifts = ₱2,900; cost ₱12,101.11
+  At ₱27,900: profit ₱15,798.89, margin 56.6%
 
 
-UPDATING THE APP LATER
-----------------------
-1. Replace index.html with the new version.
-2. Open sw.js and change  gt-towing-v1  to  gt-towing-v2  (v3 next time).
-3. Upload the folder again (Netlify: Deploys > drag the folder;
-   GitHub: upload the changed files).
-Phones get the new version the next time they open the app with internet.
+YOUR DATA
+---------
+Saved on each phone only. Nothing syncs between phones.
+Fleet & rates > "Back up rates and jobs" once a week; keep the file in Drive or Messenger.
+Restore replaces the rates and ADDS the backup's jobs (nothing on the phone is deleted).
+
+
+UPDATING THE APP ON GITHUB
+--------------------------
+1. Unzip the update on your computer. Open the folder.
+2. On GitHub: Code > Add file > Upload files.
+3. Drag in the FILES (not the zip, not the folder). Click "Commit changes".
+4. Check sw.js on GitHub shows the new version number (e.g. gt-towing-v3).
+5. Wait for the green tick under Actions, then open the app with internet.
+For the next change, raise the number in sw.js (v3 → v4) so phones pick it up.

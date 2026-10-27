@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="GT Towing">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>GT Auto Towing Calculator</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -82,7 +82,7 @@ input{font:inherit;color:inherit;user-select:text;-webkit-user-select:text}
 .cursor{display:inline-block;width:2px;height:1em;background:var(--red-ink);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
-.pad{--ks:max(48px,min(78px,calc((min(100vw,430px) - 32px - 36px)/4),calc((100dvh - 545px)/5)));display:grid;grid-template-columns:repeat(4,1fr);gap:9px 12px;margin-top:10px;justify-items:center}
+.pad{--ks:max(48px,min(78px,calc((min(100vw,430px) - 32px - 36px)/4),calc((100dvh - 570px)/5)));display:grid;grid-template-columns:repeat(4,1fr);gap:9px 12px;margin-top:10px;justify-items:center}
 .k{width:var(--ks);height:var(--ks);border-radius:50%;background:var(--key);font-size:32px;font-weight:400;display:grid;place-items:center;transition:background .25s,color .25s}
 .k:active{background:var(--key-hi);transition:none}
 .k.fn{background:var(--fn);color:var(--fn-ink);font-size:22px;font-weight:500}
@@ -158,6 +158,26 @@ button.r:active{background:var(--row-hi)}
 .pill.Dispatched{background:rgba(225,3,15,.2);color:var(--red-ink)}
 .pill.Completed{background:rgba(48,209,88,.16);color:var(--good)}
 .pill.Cancelled{background:#3a3a40;color:var(--muted)}
+.pill.Quoted{background:rgba(255,179,64,.16);color:var(--warn)}
+/* profit strip under the total */
+.pl{font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;border-radius:12px;padding:3px 8px;margin:2px -8px 0 0;font-variant-numeric:tabular-nums;max-width:calc(100% + 8px);white-space:nowrap;overflow:hidden}
+.pl:active{background:var(--row)}
+.pl b{font-weight:600}
+.good{color:var(--good)!important}.bad{color:var(--bad)!important}.warnc{color:var(--warn)!important}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.plbig{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 16px}
+.plbig b{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
+.plbig span{font-size:13px;color:var(--muted);text-align:right}
+.r .v.fg{color:var(--fg)}
+.use{font-size:13px;color:var(--red-ink);font-weight:600;padding:4px 0 4px 6px}
+.tag{white-space:nowrap;display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:6px;background:#3a3a40;color:var(--soft);margin-left:6px;vertical-align:1px}
+.fgrid select,.ed.sel{width:100%;background:var(--field);border:1px solid transparent;border-radius:8px;padding:7px 6px;font-size:15px;color:var(--fg);font-family:inherit}
+.errline{color:var(--warn);font-size:12px;display:block}
+.sw.sm{width:42px;height:26px}
+.sw.sm::after{width:22px;height:22px}
+.sw.sm[aria-pressed="true"]::after{transform:translateX(16px)}
+.r.offrow .n,.r.offrow .v{opacity:.42}
+.r.offrow .v{text-decoration:line-through}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
 .stat{background:var(--row);border-radius:12px;padding:12px 14px}
 .stat small{font-size:12px;color:var(--muted);display:block}
@@ -194,6 +214,7 @@ button.r:active{background:var(--row-hi)}
     <div class="meta" id="meta">&nbsp;</div>
     <button class="split" id="openBreak" aria-label="Price breakdown"><span id="split">&nbsp;</span><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" style="flex:none"><path d="M1.5 1.5l5 5-5 5"/></svg></button>
     <div class="total" id="total"><span class="cur">₱</span>0</div>
+    <button class="pl" id="openProfit" aria-label="Cost and profit" hidden><span id="plText">&nbsp;</span><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" style="flex:none"><path d="M1.5 1.5l5 5-5 5"/></svg></button>
   </div>
 
   <div class="chips">
@@ -232,6 +253,9 @@ button.r:active{background:var(--row-hi)}
 <section class="sheet" id="sBreak" aria-label="Price breakdown"><div class="grab"><i></i></div>
   <div class="sh-head"><button class="lbtn" id="resetOv">Reset</button><h2>Breakdown</h2><button class="rbtn" data-close>Done</button></div>
   <div class="sh-body" id="breakBody"></div></section>
+<section class="sheet" id="sProfit" aria-label="Cost and profit"><div class="grab"><i></i></div>
+  <div class="sh-head"><span class="lbtn"></span><h2>Cost &amp; profit</h2><button class="rbtn" data-close>Done</button></div>
+  <div class="sh-body" id="profitBody"></div></section>
 <section class="sheet" id="sRates" aria-label="Fleet and rates"><div class="grab"><i></i></div>
   <div class="sh-head"><span class="lbtn"></span><h2>Fleet &amp; rates</h2><button class="rbtn" data-close>Done</button></div>
   <div class="sh-body" id="ratesBody"></div></section>
@@ -245,6 +269,7 @@ button.r:active{background:var(--row-hi)}
 <div class="toast" id="toast"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
+<script src="finance.js"></script>
 <script>
 (() => {
 const $ = s => document.querySelector(s);
@@ -273,12 +298,25 @@ const DEFAULT_RATES = {
   weather:[{name:'Clear',pct:0},{name:'Rain',pct:10},{name:'Heavy rain / flood',pct:25},{name:'Typhoon signal',pct:40}],
   extras:[{name:'Wheel dollies',price:800},{name:'Go-jacks / skates',price:600},{name:'Extra winch pull',price:1500},{name:'Spill clean-up',price:1000},{name:'Storage per day',price:500}],
   discounts:[{name:'Insurance partner',pct:10},{name:'Fleet account',pct:15},{name:'Repeat customer',pct:5}],
-  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12}
+  /* GT Auto's crew pay per 8-hour shift (given by the owner). */
+  crew:[{role:'Driver',basic:650,meal:150},{role:'Helper',basic:500,meal:150}],
+  /* Starts at ₱0: the owner fills these in. Nothing is guessed. */
+  costLines:[{name:'Other trip expenses',amt:0,basis:'trip',kind:'cash'},{name:'Maintenance reserve',amt:0,basis:'km',kind:'alloc'},{name:'Tire reserve',amt:0,basis:'km',kind:'alloc'},{name:'Depreciation',amt:0,basis:'km',kind:'alloc'}],
+  routes:[],
+  /* Cost factors switched off, by key (e.g. 'tolls', 'crew:Helper'). Empty = every cost counts. */
+  costOff:{},
+  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12,homeBase:'',shiftHours:8,markup:25,margin:20}
 };
 const LISTS = {
   units:{label:'Tow units',add:'Add tow unit',sel:'unit',key:'code',blank:{code:'',name:'',type:'Flatbed',cap:0,base:0,lkm:0,ekm:0,incl:0,kmpl:0},
     fields:[['code','Code','t'],['name','Code name','t'],['type','Type','t','full'],['cap','Capacity (t)','n'],['base','Hook-up ₱','n'],['incl','Free km','n'],['lkm','Towed ₱/km','n'],['ekm','Empty ₱/km','n'],['kmpl','km per L','n']],
     note:'Hook-up covers the first free km of towing. Towed ₱/km applies with the vehicle on board; empty ₱/km to the pickup and back. Diesel is billed separately from km per litre.'},
+  crew:{label:'Crew pay per shift',add:'Add crew member',key:'role',blank:{role:'',basic:0,meal:0},
+    fields:[['role','Role','t','full'],['basic','Basic ₱','n'],['meal','Meal ₱','n']],
+    note:'Paid per shift. A job longer than one shift pays one more shift for each extra block of hours, so a 16-hour job pays 2 shifts. Meals are counted here, so don’t add them again below.'},
+  costLines:{label:'Trip costs',add:'Add cost',key:'name',blank:{name:'',amt:0,basis:'trip',kind:'cash'},
+    fields:[['name','Cost','t','full'],['amt','Amount ₱','n'],['basis','Per','sel','',[['trip','per trip'],['km','per km']]],['kind','Type','sel','',[['cash','Cash paid'],['alloc','Set aside']]]],
+    note:'Cash paid = money that leaves on the trip. Set aside = maintenance, tires and depreciation you reserve from each job; it counts in the cost but isn’t paid on the day. Diesel and tolls are worked out per job.'},
   classes:{label:'Vehicle classes',add:'Add vehicle class',sel:'vclass',key:'name',blank:{name:'',tons:0,mult:1},
     fields:[['name','Class','t','full'],['tons','Weight (t)','n'],['mult','Rate ×','n']],note:'Rate × multiplies the hook-up and towed km. Weight is checked against the unit capacity.'},
   conds:{label:'Vehicle condition',add:'Add condition',sel:'cond',key:'name',blank:{name:'',fee:0,rec:''},
@@ -287,13 +325,16 @@ const LISTS = {
   extras:{label:'Equipment & extras',add:'Add extra',key:'name',blank:{name:'',price:0},fields:[['name','Item','t','wide'],['price','Price ₱','n']]},
   discounts:{label:'Discounts',add:'Add discount',sel:'disc',key:'name',blank:{name:'',pct:0},fields:[['name','Discount','t','wide'],['pct','Off %','n']]}
 };
-const FEES = [['diesel','Diesel price','₱ per litre'],['night','Night differential','% added'],['nightFrom','Night starts','hour, 24h'],['nightTo','Night ends','hour, 24h'],['holiday','Sunday / holiday','% added'],['minCharge','Minimum charge','₱ per job'],['freeWait','Free waiting','minutes'],['waitRate','Waiting rate','₱ per hour'],['avgSpeed','Average speed','km/h, for time estimate'],['vat','VAT','%']];
+const FEES = [['homeBase','Home base','where trips start and end','t'],['markup','Markup','% added on top of cost'],['margin','Target margin','% of the price kept as profit'],['shiftHours','Crew shift length','hours per shift'],['diesel','Diesel price','₱ per litre'],['night','Night differential','% added'],['nightFrom','Night starts','hour, 24h'],['nightTo','Night ends','hour, 24h'],['holiday','Sunday / holiday','% added'],['minCharge','Minimum charge','₱ per job'],['freeWait','Free waiting','minutes'],['waitRate','Waiting rate','₱ per hour'],['avgSpeed','Average speed','km/h, for time estimate'],['vat','VAT','%']];
 
-function normRates(r){ const d=clone(DEFAULT_RATES); r=r||{}; for(const k of Object.keys(LISTS)) d[k]=Array.isArray(r[k])?r[k].map(x=>({...x})):d[k]; d.fees={...d.fees,...(r.fees||{})}; return d; }
+/* Older saved settings are kept as they are; anything new (crew, trip costs, routes, new fees) is added with its default. */
+function normRates(r){ const d=clone(DEFAULT_RATES); r=r||{}; for(const k of [...Object.keys(LISTS),'routes']) d[k]=Array.isArray(r[k])?r[k].map(x=>({...x})):d[k]; d.fees={...d.fees,...(r.fees||{})}; d.costOff=(r.costOff&&typeof r.costOff==='object')?{...r.costOff}:{}; return d; }
 let R = normRates(LS.get('gtt.rates', null));
 let jobs = LS.get('gtt.jobs', []);
 const DRAFT0 = {unit:'GT-FB1',vclass:'Car / sedan',cond:"Won't start / no power",weather:'Clear',night:'auto',holiday:false,
-  out:'8',tow:'22',back:'26',active:'tow',ret:true,stops:[],extras:{},wait:'',tolls:'',disc:'',adj:'',vat:false,ov:{}};
+  out:'8',tow:'22',back:'26',active:'tow',ret:true,stops:[],extras:{},wait:'',tolls:'',disc:'',adj:'',vat:false,ov:{},price:'',shifts:'',pickup:'',dropoff:''};
+const FIN = window.GTFinance;
+const clearJob = () => { FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.price=''; S.shifts=''; S.pickup=''; S.dropoff=''; S.active='out'; };
 const S = Object.assign(clone(DRAFT0), LS.get('gtt.draft', {}));
 S.ov=S.ov||{}; S.stops=S.stops||[]; S.extras=S.extras||{};
 const FIELDS=['out','tow','back'], FLABEL={out:'To pickup',tow:'Towed',back:'Return'};
@@ -301,15 +342,17 @@ let fresh=false, db=null, openSheet=null;
 
 /* ---------- expression ---------- */
 const OPS={'+':1,'-':1,'*':2,'/':2};
-function ev(str){
-  const t=String(str||'').match(/\d*\.?\d+|\d+\.|[+\-*/]/g); if(!t) return 0;
+/* Returns {v, bad}. bad = the entry can't be worked out (divide by 0), so the screen can flag it instead of silently using 0. */
+function evx(str){
+  const t=String(str||'').match(/\d*\.?\d+|\d+\.|[+\-*/]/g); if(!t) return {v:0,bad:false};
   while(t.length && OPS[t[t.length-1]]) t.pop();
-  const out=[],st=[];
+  const out=[],st=[]; let bad=false;
   for(const x of t){ if(OPS[x]){ while(st.length && OPS[st[st.length-1]]>=OPS[x]) out.push(st.pop()); st.push(x);} else out.push(parseFloat(x)); }
   while(st.length) out.push(st.pop());
-  const s=[]; for(const x of out){ if(typeof x==='number') s.push(x); else { const b=s.pop()??0,a=s.pop()??0; s.push(x==='+'?a+b:x==='-'?a-b:x==='*'?a*b:(b?a/b:0)); } }
-  const r=s.pop(); return isFinite(r)?Math.round(r*1e6)/1e6:0;
+  const s=[]; for(const x of out){ if(typeof x==='number') s.push(x); else { const b=s.pop()??0,a=s.pop()??0; if(x==='/'&&!b) bad=true; s.push(x==='+'?a+b:x==='-'?a-b:x==='*'?a*b:(b?a/b:0)); } }
+  const r=s.pop(); return isFinite(r)?{v:Math.round(r*1e6)/1e6,bad}:{v:0,bad:true};
 }
+const ev=str=>evx(str).v;
 const pretty=e=>String(e||'').replace(/\*/g,'×').replace(/\//g,'÷').replace(/-/g,'−');
 
 /* ---------- pricing ---------- */
@@ -345,13 +388,23 @@ function quote(){
   const adj=ev(S.adj);
   let service=sub+surcharge-discount+adj, minUp=0;
   if(loaded>0 && service<(+F.minCharge||0)){ minUp=(+F.minCharge)-service; service=+F.minCharge; }
-  const tolls=Math.max(0,ev(S.tolls)), net=service+tolls, vat=S.vat?net*(+F.vat||0)/100:0, total=net+vat;
+  const tolls=Math.max(0,ev(S.tolls)), net=service+tolls, vat=S.vat?net*(+F.vat||0)/100:0;
   const hours=(+F.avgSpeed?driven/(+F.avgSpeed):0)+0.5+waitMin/60;
-  const fit=fitOf(u,c,v);
+  const fit=fitOf(u,c,v), ready=loaded>0&&!!u.code;
+  /* Rate-card price: what the rates above add up to. No towed km = no job = ₱0. */
+  const rateCard=ready?net+vat:0;
+  /* Quoted price: the owner's own figure if typed, otherwise the rate card. */
+  const manual=String(S.price||'').trim()!=='', total=manual?Math.max(0,ev(S.price)):rateCard;
+  /* Operating cost: fuel on EVERY km driven (the return burns diesel even when it isn't billed), crew per shift, trip costs. */
+  const est=FIN.estimateCost({kmDriven:driven,kmpl,diesel,tolls,hours,shiftHours:F.shiftHours,shifts:S.shifts,crew:R.crew,lines:R.costLines,off:R.costOff});
+  const netRev=FIN.netRevenue(total,S.vat,F.vat), pl=FIN.evaluate(netRev,est.total,driven), targets=FIN.priceTargets(est.total,F.markup,F.margin);
+  const bad=FIELDS.filter(f=>evx(S[f]).bad);
   return {u,v,c,w,d,out,tow,back,stopKm,loaded,empty,driven,charged,mult,baseFee,lkm,ekm,incl,kmpl,diesel,hook,towed,deadhead,litres,fuel,condFee,extras,waitMin,waiting,
-    sub,night,nPct,wPct,hPct,surcharge,dPct,discount,adj,minUp,service,tolls,vat,total,hours,fit,
-    run:hook+towed+deadhead, fees:condFee+extras+waiting+surcharge-discount+adj+minUp+tolls+vat, ready:loaded>0&&!!u.code};
+    sub,night,nPct,wPct,hPct,surcharge,dPct,discount,adj,minUp,service,tolls,vat,total,rateCard,manual,hours,fit,est,netRev,pl,targets,bad,
+    run:hook+towed+deadhead, fees:condFee+extras+waiting+surcharge-discount+adj+minUp+tolls+vat, ready};
 }
+const withVat=x=>x==null?null:(S.vat?x*(1+(+R.fees.vat||0)/100):x);
+const pct=(x,d=1)=>x==null?'—':num(x,d)+'%';
 const hm=h=>{ const m=Math.round(h*60); return m<60?`${m} min`:`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`; };
 
 /* ---------- main render ---------- */
@@ -363,25 +416,31 @@ function render(){
   $('#className').textContent=q.v.name; $('#condName').textContent=q.c.name; $('#envName').textContent=envLabel();
   $('#pickUnit').classList.toggle('flag', !q.fit.ok);
   for(const f of FIELDS){
-    const el=$('#v-'+f), on=S.active===f;
+    const el=$('#v-'+f), on=S.active===f, chip=document.querySelector(`[data-field="${f}"]`);
     el.classList.toggle('empty',!S[f]);
     el.innerHTML=(S[f]?esc(pretty(S[f])):'0')+(on?'<i class="cursor"></i>':'');
-    document.querySelector(`[data-field="${f}"]`).classList.toggle('on',on);
+    chip.classList.toggle('on',on); chip.classList.toggle('flag',q.bad.includes(f));
   }
   const nx=FIELDS[(FIELDS.indexOf(S.active)+1)%3];
   $('#nextKey').innerHTML=esc(FLABEL[nx].replace('To pickup','Pickup'))+' ›';
   $('#acKey').textContent=S[S.active]?'C':'AC';
-  const warn=!q.fit.capOk?'Over unit capacity':!q.fit.typeOk?'Unit not suited':'';
+  const warn=q.bad.length?`Check ${FLABEL[q.bad[0]]}: can’t divide by 0`:!q.fit.capOk?'Over unit capacity':!q.fit.typeOk?'Unit not suited':'';
   $('#meta').innerHTML=q.loaded>0
     ? `${warn?`<span class="warn">⚠ ${warn}</span> · `:''}${esc(q.u.type)} · ${num(q.driven,1)} km · ~${hm(q.hours)}`
-    : 'Enter the towed distance';
+    : (warn?`<span class="warn">⚠ ${warn}</span>`:'Enter the towed distance');
   const edited=Object.keys(S.ov).some(k=>S.ov[k]!=='') || q.adj || q.d;
-  $('#split').innerHTML=`<b>${peso(q.run)}</b> tow + <b>${peso(q.fuel)}</b> fuel + <b>${peso(q.fees)}</b> fees${edited?' <span class="adj">•</span>':''}`;
+  $('#split').innerHTML=!q.ready?'Nothing to charge yet':q.manual
+    ? `Your price · rate card <b>${peso(q.rateCard)}</b>`
+    : `<b>${peso(q.run)}</b> tow + <b>${peso(q.fuel)}</b> fuel + <b>${peso(q.fees)}</b> fees${edited?' <span class="adj">•</span>':''}`;
   $('#total').innerHTML=`<span class="cur">₱</span>${Math.round(q.total).toLocaleString('en-PH')}`;
+  const plb=$('#openProfit'); plb.hidden=!q.ready;
+  if(q.ready){ const cls=q.pl.profit<0?'bad':'good';
+    $('#plText').innerHTML=`Cost <b>${peso(q.est.total)}</b> · <span class="${cls}">${q.pl.profit<0?'Loss':'Profit'} <b>${peso(Math.abs(q.pl.profit))}</b> · ${pct(q.pl.marginPct)}</span>`; }
   $('#bookBtn').disabled=!q.ready;
   fitTotal();
   LS.set('gtt.draft',S);
   if(openSheet==='sBreak') updateOuts();
+  if(openSheet==='sProfit') updateProfitOuts(q);
 }
 
 /* ---------- keypad ---------- */
@@ -392,7 +451,7 @@ function press(k){
   else if(OPS[k]){ fresh=false; if(!v) v='0'; if(OPS[v.slice(-1)]) v=v.slice(0,-1); v+=k; }
   else if(k==='='){ v=v?String(ev(v)):''; fresh=true; const nx=FIELDS[FIELDS.indexOf(f)+1]; if(nx&&!S[nx]){ S[f]=v; S.active=nx; fresh=false; render(); lit(''); return; } }
   else if(k==='BS'){ fresh=false; v=v.slice(0,-1); }
-  else if(k==='AC'){ if(v){ v=''; } else { FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.active='out'; render(); lit(''); return; } }
+  else if(k==='AC'){ if(v){ v=''; } else { clearJob(); render(); lit(''); return; } }
   else if(k==='NEXT'){ if(v) v=String(ev(v)); S[f]=v; S.active=FIELDS[(FIELDS.indexOf(f)+1)%3]; fresh=true; render(); lit(''); return; }
   S[f]=v; render(); lit(v);
 }
@@ -475,6 +534,7 @@ $('#envBody').addEventListener('click',e=>{
 });
 
 /* ---------- breakdown ---------- */
+let routeSure=null;
 function edRow(name,key,base,sub){ const v=S.ov[key], mod=v!==undefined&&v!=='';
   return `<div class="r"><span class="n">${name}${sub?`<span class="calc">${sub}</span>`:''}</span><input class="ed ${mod?'mod':''}" inputmode="decimal" data-ov="${key}" id="ov-${key}" value="${mod?esc(v):''}" placeholder="${num(base)}" aria-label="${name}"></div>`; }
 function line(label,key,cls=''){ return `<div class="r ${cls}"><span class="n">${label}</span><span class="v" data-out="${key}"></span></div>`; }
@@ -482,7 +542,7 @@ function outs(q){ return {
   hook:peso(q.hook), hookc:`${peso(q.baseFee)} × ${num(q.mult)} (${esc(q.v.name)})`,
   towed:peso(q.towed), towedc:`${num(Math.max(0,q.loaded-q.incl),1)} km after ${num(q.incl)} free × ${peso(q.lkm)} × ${num(q.mult)}`,
   dead:peso(q.deadhead), deadc:`${num(q.empty,1)} km empty × ${peso(q.ekm)}${S.ret?'':' · return not charged'}`,
-  fuel:peso(q.fuel), fuelc:`${num(q.charged,1)} km ÷ ${num(q.kmpl)} km/L = ${num(q.litres,1)} L × ${peso(q.diesel,2)}`,
+  fuel:peso(q.fuel), fuelc:`billed on ${num(q.charged,1)} km ÷ ${num(q.kmpl)} km/L = ${num(q.litres,1)} L × ${peso(q.diesel,2)}`,
   cond:peso(q.condFee), extras:peso(q.extras), wait:peso(q.waiting),
   waitc:`${num(q.waitMin,0)} min, first ${num(R.fees.freeWait,0)} free`,
   sub:peso(q.sub), sur:peso(q.surcharge), surc:[q.nPct?`night ${num(q.nPct)}%`:'',q.wPct?`${esc(q.w.name.toLowerCase())} ${num(q.wPct)}%`:'',q.hPct?`holiday ${num(q.hPct)}%`:''].filter(Boolean).join(' + ')||'none',
@@ -497,16 +557,24 @@ function renderBreak(){
   const stops=S.stops.map((s,i)=>`<div class="r"><input class="txt" data-stop="${i}:label" id="st-l-${i}" value="${esc(s.label)}" placeholder="Stop ${i+1} (e.g. shop)"><input class="ed s" inputmode="decimal" data-stop="${i}:km" id="st-k-${i}" value="${esc(s.km)}" placeholder="km"><button class="x" data-rmstop="${i}" aria-label="Remove stop">✕</button></div>`).join('');
   const ex=R.extras.filter(x=>x.name).map(x=>{ const n=+S.extras[x.name]||0; return `<div class="r"><span class="n">${esc(x.name)}<span class="calc">${peso(x.price)} each</span></span><div class="step"><button data-ex="${esc(x.name)}" data-d="-1" aria-label="Less">−</button><b>${n}</b><button data-ex="${esc(x.name)}" data-d="1" aria-label="More">+</button></div></div>`; }).join('');
   const ds=[{name:'',pct:0},...R.discounts.filter(d=>d.name)].map(d=>`<button class="r" data-disc="${esc(d.name)}"><span class="n">${d.name?esc(d.name):'No discount'}</span><span class="s">${d.name?num(d.pct)+'% off':''}</span><span class="check">${S.disc===d.name?'✓':''}</span></button>`).join('');
+  const base=F.homeBase||'Home base';
+  const routes=(R.routes||[]).map((r,i)=>`<div class="r"><button class="n" style="text-align:left" data-route="${i}">${esc(r.name)}<span class="calc">${num(ev(r.out),1)} + ${num(ev(r.tow)+(r.stops||[]).reduce((a,s)=>a+ev(s.km),0),1)} + ${num(ev(r.back),1)} km${+r.tolls?' · tolls '+peso(r.tolls):''}</span></button><button class="x" data-rmroute="${i}">${routeSure===i?'Remove?':'✕'}</button></div>`).join('');
   $('#breakBody').innerHTML=`
     <div class="glabel">Route</div>
     <div class="group">
-      <div class="r"><span class="n">To pickup<span class="calc">Base to the vehicle, empty</span></span><span class="v">${num(q.out,1)} km</span></div>
+      <div class="r"><span class="n">From<span class="calc">set your home base in Fleet &amp; rates</span></span><span class="s">${esc(base)}</span></div>
+      <div class="r"><input class="txt" data-s="pickup" id="in-pickup" value="${esc(S.pickup)}" placeholder="Pickup place (e.g. Goa, Camarines Sur)" autocomplete="off"></div>
+      <div class="r"><input class="txt" data-s="dropoff" id="in-dropoff" value="${esc(S.dropoff)}" placeholder="Drop-off place (e.g. Daet, Camarines Norte)" autocomplete="off"></div>
+      <div class="r"><span class="n">To pickup<span class="calc">${esc(base)} to the vehicle, empty</span></span><span class="v">${num(q.out,1)} km</span></div>
       <div class="r"><span class="n">Towed<span class="calc">Pickup to first drop-off</span></span><span class="v">${num(q.tow,1)} km</span></div>
       ${stops}
       <button class="r add" id="addStop">＋ Add another drop-off leg</button>
-      <div class="r"><span class="n">Return<span class="calc">Last drop-off back to base</span></span><span class="v">${num(q.back,1)} km</span></div>
-      <div class="r"><span class="n">Charge the return trip</span><button class="sw" data-tog="ret" aria-pressed="${!!S.ret}" aria-label="Charge the return trip"></button></div>
+      <div class="r"><span class="n">Return<span class="calc">Last drop-off back to ${esc(base)}</span></span><span class="v">${num(q.back,1)} km</span></div>
+      <div class="r"><span class="n">Total driven</span><span class="v fg">${num(q.driven,1)} km</span></div>
+      <div class="r"><span class="n">Charge the return trip<span class="calc">customer price only; the return’s diesel is always in your cost</span></span><button class="sw" data-tog="ret" aria-pressed="${!!S.ret}" aria-label="Charge the return trip"></button></div>
+      <button class="r add" id="saveRoute">＋ Save this route for next time</button>
     </div>
+    ${routes?`<div class="glabel">Saved routes</div><div class="group">${routes}</div><div class="gnote">Tap a route to fill in its distances and tolls.</div>`:''}
     <div class="glabel">${esc(q.u.code)} ${esc(q.u.name)} · ${esc(q.u.type)}</div>
     <div class="group">
       ${edRow('Hook-up fee','base',q.u.base,'₱ per job')}
@@ -534,7 +602,7 @@ function renderBreak(){
       <div class="r"><span class="n">Hook-up<span class="calc" data-out="hookc"></span></span><span class="v" data-out="hook"></span></div>
       <div class="r"><span class="n">Towed distance<span class="calc" data-out="towedc"></span></span><span class="v" data-out="towed"></span></div>
       <div class="r"><span class="n">Empty running<span class="calc" data-out="deadc"></span></span><span class="v" data-out="dead"></span></div>
-      <div class="r"><span class="n">Fuel<span class="calc" data-out="fuelc"></span></span><span class="v" data-out="fuel"></span></div>
+      <div class="r"><span class="n">Fuel charge<span class="calc" data-out="fuelc"></span></span><span class="v" data-out="fuel"></span></div>
       ${line('Condition fee','cond')}${line('Equipment &amp; extras','extras')}
       <div class="r"><span class="n">Waiting<span class="calc" data-out="waitc"></span></span><span class="v" data-out="wait"></span></div>
       ${line('Subtotal','sub','sum')}
@@ -558,13 +626,24 @@ $('#openBreak').addEventListener('click',()=>{ renderBreak(); showSheet('sBreak'
 $('#breakBody').addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset.ov){ S.ov[t.dataset.ov]=t.value.replace(/[^\d.]/g,''); t.classList.toggle('mod',t.value!==''); }
+  else if(t.dataset.s==='pickup'||t.dataset.s==='dropoff'){ S[t.dataset.s]=t.value; }
   else if(t.dataset.s){ S[t.dataset.s]=t.dataset.s==='adj'?t.value.replace(/[^\d.+\-]/g,''):t.value.replace(/[^\d.]/g,''); if(t.dataset.s==='adj') t.classList.toggle('mod',!!S.adj); }
   else if(t.dataset.stop){ const [i,k]=t.dataset.stop.split(':'); S.stops[+i][k]=k==='km'?t.value.replace(/[^\d.]/g,''):t.value; }
   render();
 });
 $('#breakBody').addEventListener('click',e=>{
   const tg=e.target.closest('[data-tog]'), ex=e.target.closest('[data-ex]'), ds=e.target.closest('[data-disc]'), rm=e.target.closest('[data-rmstop]');
-  if(tg){ S[tg.dataset.tog]=!S[tg.dataset.tog]; }
+  const ro=e.target.closest('[data-route]'), rr=e.target.closest('[data-rmroute]');
+  if(ro){ const r=R.routes[+ro.dataset.route]; if(!r) return;
+    Object.assign(S,{out:String(r.out||''),tow:String(r.tow||''),back:String(r.back||''),tolls:String(r.tolls||''),pickup:r.pickup||'',dropoff:r.dropoff||'',stops:clone(r.stops||[])});
+    routeSure=null; toast(`<span class="ok">✓</span>${esc(r.name)} loaded`); }
+  else if(rr){ const i=+rr.dataset.rmroute; if(routeSure!==i){ routeSure=i; renderBreak(); return; } R.routes.splice(i,1); routeSure=null; saveRates(); }
+  else if(e.target.id==='saveRoute'){ const q=quote(); if(!(q.loaded>0)){ toast('Enter the towed distance first'); return; }
+    const name=(S.pickup||S.dropoff)?`${S.pickup||'?'} → ${S.dropoff||'?'}`:`${num(q.out,1)} + ${num(q.loaded,1)} + ${num(q.back,1)} km`;
+    const r={name,pickup:S.pickup,dropoff:S.dropoff,out:S.out,tow:S.tow,back:S.back,tolls:S.tolls,stops:clone(S.stops)};
+    const i=R.routes.findIndex(x=>x.name===name); if(i>=0) R.routes[i]=r; else R.routes.unshift(r);
+    saveRates(); toast(`<span class="ok">✓</span>Route saved`); }
+  else if(tg){ S[tg.dataset.tog]=!S[tg.dataset.tog]; }
   else if(ex){ const n=Math.max(0,(+S.extras[ex.dataset.ex]||0)+(+ex.dataset.d)); if(n) S.extras[ex.dataset.ex]=n; else delete S.extras[ex.dataset.ex]; }
   else if(ds){ S.disc=ds.dataset.disc; }
   else if(rm){ S.stops.splice(+rm.dataset.rmstop,1); }
@@ -579,56 +658,160 @@ $('#breakBody').addEventListener('click',e=>{
   } else return;
   renderBreak(); render();
 });
-$('#resetOv').addEventListener('click',()=>{ S.ov={}; S.adj=''; S.disc=''; S.extras={}; S.wait=''; S.tolls=''; S.stops=[]; S.vat=false; S.ret=true; renderBreak(); render(); });
+$('#resetOv').addEventListener('click',()=>{ S.ov={}; S.adj=''; S.disc=''; S.extras={}; S.wait=''; S.tolls=''; S.stops=[]; S.vat=false; S.ret=true; S.price=''; S.shifts=''; renderBreak(); render(); });
+
+/* ---------- cost & profit ---------- */
+const itemCalc=(it,q)=>{ const d=it.detail||{};
+  if(it.key==='fuel') return `${num(d.km,1)} km ÷ ${num(d.kmpl)} km/L = ${num(d.litres,2)} L × ${peso(d.diesel,2)}`;
+  if(it.key==='tolls') return 'from the Breakdown';
+  if(it.key.startsWith('crew:')) return `${d.shifts} shift${d.shifts>1?'s':''} × ${peso(d.perShift)} (${peso(d.basic)} basic + ${peso(d.meal)} meal)`;
+  return d.basis==='km'?`${peso(d.rate,2)} per km × ${num(q.driven,1)} km`:'per trip'; };
+function profitOuts(q){
+  const F=R.fees, t=q.targets, o={};
+  o.profit=(q.pl.profit<0?'−':'')+peso(Math.abs(q.pl.profit),2);
+  o.profitc=`${q.pl.profit<0?'Expected loss':'Expected profit'} (estimate)<br>margin ${pct(q.pl.marginPct)} · markup ${pct(q.pl.markupPct)}`;
+  o.ratecard=peso(q.rateCard); o.be=peso(withVat(t.breakEven),2);
+  o.mulabel=`With ${num(F.markup)}% markup`; o.mu=t.markupPrice==null?`<span class="warnc">${esc(t.markupError)}</span>`:peso(withVat(t.markupPrice),2);
+  o.mglabel=`For a ${num(F.margin)}% margin`; o.mg=t.marginPrice==null?`<span class="warnc">${esc(t.marginError)}</span>`:peso(withVat(t.marginPrice),2);
+  for(const it of q.est.items){ o['i:'+it.key]=peso(it.amount,2); o['c:'+it.key]=itemCalc(it,q); }
+  o.shifts=String(q.est.shifts); o.shiftc=S.shifts?'set by you':`auto: ~${hm(q.hours)} ÷ ${num(F.shiftHours)} h shifts`;
+  o.cash=peso(q.est.cash,2); o.alloc=peso(q.est.alloc,2); o.cost=peso(q.est.total,2);
+  o.rev=peso(q.netRev,2); o.rpk=q.pl.revPerKm==null?'—':peso(q.pl.revPerKm,2); o.cpk=q.pl.costPerKm==null?'—':peso(q.pl.costPerKm,2); o.km=num(q.driven,1)+' km';
+  o.problems=q.est.problems.map(esc).join('<br>');
+  return o;
+}
+function updateProfitOuts(q){
+  q=q||quote(); const body=$('#profitBody'), has=!!body.querySelector('[data-po]');
+  if(!q.ready||!has){ if(!!q.ready!==has) renderProfit(); return; }
+  const o=profitOuts(q);
+  body.querySelectorAll('[data-po]').forEach(el=>{ const k=el.dataset.po; if(k in o) el.innerHTML=o[k]; });
+  const pb=body.querySelector('[data-po="profit"]'); pb.classList.toggle('good',q.pl.profit>=0); pb.classList.toggle('bad',q.pl.profit<0);
+}
+function renderProfit(){
+  const q=quote(), F=R.fees;
+  if(!q.ready){ $('#profitBody').innerHTML='<div class="group"><div class="empty-state"><b>No trip yet</b>Enter the towed distance to see the cost and profit.</div></div>'; return; }
+  const row=it=>`<div class="r ${it.off?'offrow':''}"><span class="n">${esc(it.name)}${it.kind==='alloc'?'<span class="tag">set aside</span>':''}<span class="calc" data-po="c:${esc(it.key)}"></span></span><span class="v fg" data-po="i:${esc(it.key)}"></span><button class="sw sm" data-off="${esc(it.key)}" aria-pressed="${!it.off}" aria-label="Include ${esc(it.name)}"></button></div>`;
+  const offCount=q.est.items.filter(i=>i.off).length;
+  const cash=q.est.items.filter(i=>i.kind==='cash'), alloc=q.est.items.filter(i=>i.kind==='alloc');
+  $('#profitBody').innerHTML=`
+    <div class="group"><div class="plbig"><b data-po="profit"></b><span data-po="profitc"></span></div></div>
+    <div class="glabel">Your quote</div>
+    <div class="group">
+      <div class="r"><span class="n">Quoted price<span class="calc">blank = use the rate card${S.vat?' · includes VAT':''}</span></span><input class="ed w ${q.manual?'mod':''}" inputmode="decimal" id="pf-price" data-pp="price" value="${esc(S.price)}" placeholder="${Math.round(q.rateCard)}" aria-label="Quoted price"></div>
+      <div class="r"><span class="n">Rate card price</span><span class="v" data-po="ratecard"></span><button class="use" data-use="rate">Use</button></div>
+    </div>
+    <div class="glabel">Price targets${S.vat?' · incl. VAT':''}</div>
+    <div class="group">
+      <div class="r"><span class="n">Markup<span class="calc">profit as a % of cost</span></span><input class="ed s" inputmode="decimal" id="pf-markup" data-pf="markup" value="${esc(F.markup)}" aria-label="Markup percent"><span class="s">%</span></div>
+      <div class="r"><span class="n">Target margin<span class="calc">profit as a % of the price</span></span><input class="ed s" inputmode="decimal" id="pf-margin" data-pf="margin" value="${esc(F.margin)}" aria-label="Target margin percent"><span class="s">%</span></div>
+    </div>
+    <div class="gnote">Saved as your default. A 25% markup and a 20% margin give the same price.</div>
+    <div class="group">
+      <div class="r"><span class="n">Break-even<span class="calc">covers every cost, ₱0 profit</span></span><span class="v fg" data-po="be"></span></div>
+      <div class="r"><span class="n"><span data-po="mulabel"></span><span class="calc">cost × (1 + markup)</span></span><span class="v fg" data-po="mu"></span><button class="use" data-use="mu">Use</button></div>
+      <div class="r"><span class="n"><span data-po="mglabel"></span><span class="calc">cost ÷ (1 − margin)</span></span><span class="v fg" data-po="mg"></span><button class="use" data-use="mg">Use</button></div>
+    </div>
+    <div class="glabel">Estimated costs · ${num(q.driven,1)} km${offCount?` · ${offCount} off`:''}</div>
+    <div class="gnote" style="margin:0 0 8px">Switch a cost off to leave it out of the cost, break-even, price targets and profit. Your choice is kept for the next quotes.</div>
+    <div class="group">
+      ${cash.map(row).join('')}
+      <div class="r"><span class="n">Crew shifts<span class="calc" data-po="shiftc"></span></span><div class="step"><button data-sh="-1" aria-label="Fewer shifts">−</button><b data-po="shifts"></b><button data-sh="1" aria-label="More shifts">+</button></div>${S.shifts?'<button class="use" data-sh="auto">Auto</button>':''}</div>
+      <div class="r sum"><span class="n">Cash paid on the trip</span><span class="v" data-po="cash"></span></div>
+      ${alloc.map(row).join('')}
+      ${alloc.length?'<div class="r sum"><span class="n">Set aside<span class="calc">counted in the cost, not paid on the day</span></span><span class="v" data-po="alloc"></span></div>':''}
+      <div class="r big"><span class="n" style="font-weight:600">Total cost</span><span class="v" data-po="cost"></span></div>
+      <div class="r" ${q.est.problems.length?'':'hidden'}><span class="n errline" data-po="problems"></span></div>
+    </div>
+    <div class="glabel">Per km</div>
+    <div class="group">
+      <div class="r"><span class="n">Revenue${S.vat?'<span class="calc">VAT taken out</span>':''}</span><span class="v" data-po="rev"></span></div>
+      <div class="r"><span class="n">Revenue per km</span><span class="v" data-po="rpk"></span></div>
+      <div class="r"><span class="n">Cost per km</span><span class="v" data-po="cpk"></span></div>
+      <div class="r"><span class="n">Km driven<span class="calc">to pickup + towed + return</span></span><span class="v" data-po="km"></span></div>
+    </div>
+    <div class="gnote" style="margin-top:-12px">Estimates only. Record what the job really cost in Tow jobs after it’s done. Change crew pay and trip costs in Fleet &amp; rates.</div>`;
+  updateProfitOuts(q);
+}
+$('#openProfit').addEventListener('click',()=>{ renderProfit(); showSheet('sProfit'); });
+$('#profitBody').addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.pp==='price'){ S.price=t.value.replace(/[^\d.]/g,''); t.classList.toggle('mod',!!S.price); }
+  else if(t.dataset.pf){ R.fees[t.dataset.pf]=+t.value.replace(/[^\d.]/g,'')||0; saveRates(); }
+  else return;
+  render();
+});
+$('#profitBody').addEventListener('click',e=>{
+  const u=e.target.closest('[data-use]'), sh=e.target.closest('[data-sh]'), sw=e.target.closest('[data-off]');
+  if(sw){ const k=sw.dataset.off; if(R.costOff[k]) delete R.costOff[k]; else R.costOff[k]=true; saveRates(); }
+  else if(u){ const q=quote(), k=u.dataset.use;
+    const val=k==='rate'?'':k==='mu'?withVat(q.targets.markupPrice):withVat(q.targets.marginPrice);
+    if(val===null) return; S.price=val===''?'':String(Math.ceil(val)); }
+  else if(sh){ const cur=quote().est.shifts; S.shifts=sh.dataset.sh==='auto'?'':String(Math.max(1,cur+(+sh.dataset.sh))); }
+  else return;
+  render(); renderProfit();
+});
 
 /* ---------- fleet & rates ---------- */
 function renderRates(){
   let html='';
   for(const [lk,L] of Object.entries(LISTS)){
-    const items=R[lk].map((it,i)=>`<div class="item"><div class="item-h"><b>${esc(lk==='units'?((it.code||'New unit')+(it.name?' · '+it.name:'')):(it.name||'New'))}</b><button class="x" data-del="${lk}:${i}">Remove</button></div>
-      <div class="fgrid">${L.fields.map(([k,lab,ty,span])=>`<label class="${span||''}">${lab}<input id="f-${lk}-${i}-${k}" data-f="${lk}:${i}:${k}" ${ty==='n'?'inputmode="decimal"':''} ${k==='type'?'list="unitTypes"':''} value="${esc(it[k]??'')}"></label>`).join('')}</div></div>`).join('');
+    const items=R[lk].map((it,i)=>`<div class="item"><div class="item-h"><b>${esc(itemTitle(lk,it))}</b><button class="x" data-del="${lk}:${i}">Remove</button></div>
+      <div class="fgrid">${L.fields.map(([k,lab,ty,span,opts])=>`<label class="${span||''}">${lab}${ty==='sel'
+        ?`<select id="f-${lk}-${i}-${k}" data-f="${lk}:${i}:${k}">${opts.map(([v,t])=>`<option value="${v}" ${it[k]===v?'selected':''}>${t}</option>`).join('')}</select>`
+        :`<input id="f-${lk}-${i}-${k}" data-f="${lk}:${i}:${k}" ${ty==='n'?'inputmode="decimal"':''} ${k==='type'?'list="unitTypes"':''} value="${esc(it[k]??'')}">`}</label>`).join('')}
+        ${lk==='crew'?`<label class="full" style="color:var(--soft)">Per shift: ${peso((+it.basic||0)+(+it.meal||0))}</label>`:''}</div></div>`).join('');
     html+=`<div class="glabel">${L.label}</div><div class="group">${items}<button class="r add" data-addrow="${lk}">＋ ${L.add}</button></div>${L.note?`<div class="gnote">${L.note}</div>`:''}`;
   }
-  html+=`<div class="glabel">Fuel, time &amp; fees</div><div class="group">${FEES.map(([k,lab,sub])=>`<div class="r"><span class="n">${lab}<span class="calc">${sub}</span></span><input class="ed" inputmode="decimal" id="fee-${k}" data-fee="${k}" value="${esc(R.fees[k])}"></div>`).join('')}</div>
-    <div class="gnote">Saved jobs keep the price they were quoted at.</div>
+  html+=`<div class="glabel">Pricing, fuel, time &amp; fees</div><div class="group">${FEES.map(([k,lab,sub,ty])=>`<div class="r"><span class="n">${lab}<span class="calc">${sub}</span></span><input class="ed ${ty==='t'?'w':''}" ${ty==='t'?'':'inputmode="decimal"'} id="fee-${k}" data-fee="${k}" value="${esc(R.fees[k])}" ${k==='homeBase'?'placeholder="e.g. Maroroy, Daraga"':''}></div>`).join('')}</div>
+    <div class="gnote">Saved jobs keep the prices, costs and rates they were quoted with.</div>
     <div class="glabel">This phone</div>
     <div class="group">
+      <div class="r"><span class="n">Phone code<span class="calc">goes in job numbers so two phones never share one</span></span><input class="ed s" id="phoneCode" maxlength="4" value="${esc(deviceCode())}" autocapitalize="characters"></div>
       <button class="r add" id="installApp" ${installEvt?'':'hidden'}>Install as app on this phone</button>
       <button class="r add" id="exportData">Back up rates and jobs</button>
       <button class="r add" id="importData">Restore from a backup file</button>
     </div>
-    <div class="gnote">Everything is saved on this phone only. Back up once a week and keep the file in Google Drive or Messenger. Restore it on a new phone to move your data.</div>
+    <div class="gnote">Everything is saved on this phone only; nothing syncs between phones. Back up once a week and keep the file in Google Drive or Messenger. Restoring replaces the rates and adds the backup’s jobs without deleting any on this phone.</div>
     <button class="wide-btn ghost" id="resetRates">Restore sample rates</button><div class="sync" id="syncNote"></div>`;
   $('#ratesBody').innerHTML=html; syncNote();
 }
 $('#openRates').addEventListener('click',()=>{ renderRates(); showSheet('sRates'); });
-$('#ratesBody').addEventListener('input',e=>{
+function itemTitle(lk,it){ return lk==='units'?((it.code||'New unit')+(it.name?' · '+it.name:'')):lk==='crew'?(it.role||'New'):(it.name||'New'); }
+function onRatesInput(e){
   const t=e.target;
-  if(t.dataset.fee){ R.fees[t.dataset.fee]=+t.value.replace(/[^\d.]/g,'')||0; saveRates(); return; }
+  if(t.id==='phoneCode'){ const c=t.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4); if(c) LS.set('gtt.device',c); return; }
+  if(t.dataset.fee){ const k=t.dataset.fee; R.fees[k]=k==='homeBase'?t.value:(+t.value.replace(/[^\d.]/g,'')||0); saveRates(); return; }
   if(!t.dataset.f) return;
   const [lk,i,k]=t.dataset.f.split(':'), L=LISTS[lk], row=R[lk][+i], isNum=L.fields.find(f=>f[0]===k)[2]==='n';
   if(isNum){ row[k]=+t.value.replace(/[^\d.]/g,'')||0; }
   else { const old=row[k]; row[k]=t.value;
     if(k===L.key){ if(L.sel&&S[L.sel]===old) S[L.sel]=t.value; if(lk==='extras'&&S.extras[old]){ S.extras[t.value]=S.extras[old]; delete S.extras[old]; } }
-    const h=t.closest('.item').querySelector('.item-h b'); h.textContent=lk==='units'?((row.code||'New unit')+(row.name?' · '+row.name:'')):(row.name||'New'); }
+    const h=t.closest('.item').querySelector('.item-h b'); h.textContent=itemTitle(lk,row); }
+  if(lk==='crew'){ const lab=t.closest('.item').querySelector('label.full'); if(lab) lab.textContent='Per shift: '+peso((+row.basic||0)+(+row.meal||0)); }
   saveRates();
-});
+}
+$('#ratesBody').addEventListener('input',onRatesInput);
+$('#ratesBody').addEventListener('change',e=>{ if(e.target.tagName==='SELECT') onRatesInput(e); });
 let delArm=null;
 $('#ratesBody').addEventListener('click',e=>{
   const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]');
   if(d){ if(delArm!==d.dataset.del){ delArm=d.dataset.del; d.textContent='Tap to confirm'; setTimeout(()=>{ if(delArm===d.dataset.del){ delArm=null; if(d.isConnected) d.textContent='Remove'; } },2500); return; }
     delArm=null; const [lk,i]=d.dataset.del.split(':'); R[lk].splice(+i,1); saveRates(true); renderRates(); render(); return; }
   if(ad){ const lk=ad.dataset.addrow; R[lk].push(clone(LISTS[lk].blank)); renderRates(); $(`#f-${lk}-${R[lk].length-1}-${LISTS[lk].fields[0][0]}`)?.focus(); return; }
-  if(e.target.id==='resetRates'){ if(e.target.dataset.sure){ R=normRates(null); saveRates(true); renderRates(); render(); toast('Sample rates restored'); } else { e.target.dataset.sure='1'; e.target.textContent='Tap again to restore'; } }
+  if(e.target.id==='resetRates'){ if(e.target.dataset.sure){ const keepRoutes=R.routes, keepBase=R.fees.homeBase; R=normRates(null); R.routes=keepRoutes; R.fees.homeBase=keepBase; saveRates(true); renderRates(); render(); toast('Sample rates restored'); } else { e.target.dataset.sure='1'; e.target.textContent='Tap again to restore'; } }
 });
 
 /* ---------- booking ---------- */
-function nextRef(){ const m=jobs.reduce((a,b)=>Math.max(a,parseInt(String(b.ref).replace(/\D/g,''),10)||0),0); return 'TW-'+String(m+1).padStart(4,'0'); }
+function deviceCode(){ let c=LS.get('gtt.device',''); if(!c){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ'; c=A[Math.floor(Math.random()*24)]+A[Math.floor(Math.random()*24)]; LS.set('gtt.device',c); } return c; }
+/* TW-<phone code>-0001. Older numbers (TW-0001) are left as they are. */
+function nextRef(){ const p='TW-'+deviceCode()+'-'; const m=jobs.reduce((a,b)=>String(b.ref).startsWith(p)?Math.max(a,parseInt(String(b.ref).slice(p.length),10)||0):a,0); return p+String(m+1).padStart(4,'0'); }
+const r2=n=>Math.round((+n||0)*100)/100;
 $('#bookBtn').addEventListener('click',()=>{
-  const q=quote(); if(!q.ready) return;
+  const q=quote(); if(!q.ready) return; const cls=q.pl.profit<0?'bad':'good';
   $('#bookBody').innerHTML=`
     <div class="group">
       <div class="r big"><span class="n" style="font-weight:600">${nextRef()}</span><span class="v">${peso(q.total)}</span></div>
+      <div class="r"><span class="n">Estimated cost<span class="calc ${cls}">${q.pl.profit<0?'Loss':'Profit'} ${peso(Math.abs(q.pl.profit))} · margin ${pct(q.pl.marginPct)} (estimate)</span></span><span class="s">${peso(q.est.total)}</span></div>
       <div class="r"><span class="n">${esc(q.u.code)} ${esc(q.u.name)}<span class="calc">${esc(q.u.type)}</span></span><span class="s">${num(q.driven,1)} km · ~${hm(q.hours)}</span></div>
       <div class="r"><span class="n">${esc(q.v.name)}<span class="calc">${esc(q.c.name)} · ${esc(envLabel())}</span></span></div>
     </div>
@@ -636,50 +819,99 @@ $('#bookBtn').addEventListener('click',()=>{
       <div class="r"><input class="txt" id="bkCust" placeholder="Customer name" autocomplete="off"></div>
       <div class="r"><input class="txt" id="bkPhone" placeholder="Contact number" inputmode="tel" autocomplete="off"></div>
       <div class="r"><input class="txt" id="bkPlate" placeholder="Plate number and vehicle model" autocomplete="off"></div>
-      <div class="r"><input class="txt" id="bkFrom" placeholder="Pickup location" autocomplete="off"></div>
-      <div class="r"><input class="txt" id="bkTo" placeholder="Drop-off location" autocomplete="off"></div>
+      <div class="r"><input class="txt" id="bkFrom" placeholder="Pickup location" autocomplete="off" value="${esc(S.pickup)}"></div>
+      <div class="r"><input class="txt" id="bkTo" placeholder="Drop-off location" autocomplete="off" value="${esc(S.dropoff)}"></div>
     </div>
-    <div class="gnote" style="margin-top:-12px">All optional. Saved with today's date and time.</div>
-    <button class="wide-btn" id="bkConfirm">Dispatch job</button>`;
+    <div class="gnote" style="margin-top:-12px">All optional. The job keeps today's rates, diesel price and costs even if you change them later.</div>
+    <button class="wide-btn" data-book="Dispatched">Dispatch job</button>
+    <button class="wide-btn ghost" data-book="Quoted" style="margin-top:10px">Save as quote only</button>`;
   showSheet('sBook');
 });
 $('#bookBody').addEventListener('click',async e=>{
-  if(e.target.id!=='bkConfirm') return;
-  const btn=e.target; btn.disabled=true; const q=quote(), ref=nextRef(), v=id=>$(id).value.trim(), r2=n=>Math.round(n*100)/100;
-  const rec={ref,at:new Date().toISOString(),customer:v('#bkCust'),phone:v('#bkPhone'),plate:v('#bkPlate'),pickup:v('#bkFrom'),dropoff:v('#bkTo'),
+  const btn=e.target.closest('[data-book]'); if(!btn) return;
+  $('#bookBody').querySelectorAll('[data-book]').forEach(b=>b.disabled=true);
+  const q=quote(), ref=nextRef(), v=id=>$(id).value.trim(), at=new Date().toISOString(), F=R.fees, status=btn.dataset.book;
+  const rec={ref,at,updatedAt:at,v:2,customer:v('#bkCust'),phone:v('#bkPhone'),plate:v('#bkPlate'),pickup:v('#bkFrom'),dropoff:v('#bkTo'),homeBase:F.homeBase||'',
     unit:q.u.code+(q.u.name?' '+q.u.name:''),unitType:q.u.type,vehicle:q.v.name,condition:q.c.name,weather:q.w.name,night:q.night,holiday:!!S.holiday,
     kmOut:q.out,kmTowed:r2(q.loaded),kmBack:q.back,kmDriven:r2(q.driven),stops:S.stops.length,litres:r2(q.litres),
-    tow:r2(q.run),fuel:r2(q.fuel),fees:r2(q.fees),discount:q.d?q.d.name:'',total:r2(q.total),status:'Dispatched'};
-  if(!(await putJob(rec))){ btn.disabled=false; return; }
-  FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.active='out';
-  closeSheet(); toast(`<span class="ok">✓</span>${ref} dispatched · ${peso(rec.total)}`);
+    tow:r2(q.run),fuel:r2(q.fuel),fees:r2(q.fees),discount:q.d?q.d.name:'',total:r2(q.total),status,
+    rateCard:r2(q.rateCard),priceManual:q.manual,vat:!!S.vat,netRevenue:r2(q.netRev),
+    est:{items:q.est.items.map(i=>({key:i.key,name:i.name,kind:i.kind,amount:r2(i.amount),...(i.off?{off:true}:{})})),cash:r2(q.est.cash),alloc:r2(q.est.alloc),total:r2(q.est.total),litres:r2(q.est.litres),shifts:q.est.shifts,hours:r2(q.hours)},
+    estProfit:r2(q.pl.profit),estMargin:q.pl.marginPct==null?null:r2(q.pl.marginPct),
+    assump:{diesel:q.diesel,kmpl:q.kmpl,baseFee:q.baseFee,lkm:q.lkm,ekm:q.ekm,incl:q.incl,mult:q.mult,vatPct:+F.vat||0,markup:+F.markup||0,margin:+F.margin||0,shiftHours:+F.shiftHours||8,
+      crew:clone(R.crew),costLines:clone(R.costLines),tolls:q.tolls,legs:{out:S.out,tow:S.tow,back:S.back,stops:clone(S.stops),ret:!!S.ret}},
+    actual:{amounts:{},collected:''}};
+  if(!(await putJob(rec))){ $('#bookBody').querySelectorAll('[data-book]').forEach(b=>b.disabled=false); return; }
+  clearJob(); closeSheet(); toast(`<span class="ok">✓</span>${ref} ${status==='Quoted'?'saved as quote':'dispatched'} · ${peso(rec.total)}`);
 });
 
 /* ---------- jobs ---------- */
 let expanded=null, delSure=null;
 const mk=d=>{ const x=new Date(d); return x.getFullYear()*12+x.getMonth(); };
+/* Cost lines a job asks for after it's done. Jobs saved before cost tracking get a short generic list with no estimate. */
+const LEGACY_ITEMS=[{key:'fuel',name:'Diesel',kind:'cash',amount:null},{key:'tolls',name:'Tolls & parking',kind:'cash',amount:null},{key:'crew',name:'Crew pay',kind:'cash',amount:null}];
+const jobItems=b=>[...(b.est?b.est.items.filter(i=>!i.off):LEGACY_ITEMS),{key:'other',name:'Other expenses',kind:'cash',amount:0,optional:true}];
+const jobActual=b=>FIN.actualResult(jobItems(b),b.actual);
+function jobResultHtml(b){
+  const a=jobActual(b), hasEst=!!b.est;
+  const label=a.complete?'Actual profit':a.collected===null?'Profit':`Profit so far · ${a.pending} cost${a.pending>1?'s':''} still estimated`;
+  const diff=(hasEst&&a.profit!==null)?a.profit-(+b.estProfit||0):null;
+  return `<div class="r"><span class="n">Actual cost${a.pending?`<span class="calc">${a.pending} still ${hasEst?'using the estimate':'not entered'}</span>`:''}</span><span class="v fg">${peso(a.cost,2)}</span></div>
+    <div class="r"><span class="n">${label}${diff!==null?`<span class="calc">${diff>=0?'+':'−'}${peso(Math.abs(diff),2)} vs estimate</span>`:''}</span><span class="v ${a.profit===null?'':a.profit<0?'bad':'good'}">${a.profit===null?'enter amount collected':peso(a.profit,2)}</span></div>`;
+}
 function renderJobs(){
-  const now=mk(new Date()), mo=jobs.filter(b=>b.status!=='Cancelled'&&mk(b.at)===now);
-  const stats=`<div class="stats"><div class="stat"><small>This month</small><b>${peso(mo.reduce((a,b)=>a+(+b.total||0),0))}</b></div><div class="stat"><small>Tows · km towed</small><b>${mo.length} · ${num(mo.reduce((a,b)=>a+(+b.kmTowed||0),0),0)}</b></div></div>`;
+  const now=mk(new Date()), live=jobs.filter(b=>b.status==='Dispatched'||b.status==='Completed'), mo=live.filter(b=>mk(b.at)===now);
+  const done=jobs.filter(b=>b.status==='Completed'&&mk(b.at)===now).map(jobActual).filter(a=>a.collected!==null);
+  const pend=done.reduce((s,a)=>s+a.pending,0), quotes=jobs.filter(b=>b.status==='Quoted').length;
+  const stats=`<div class="stats"><div class="stat"><small>Booked this month · ${mo.length} tow${mo.length===1?'':'s'}</small><b>${peso(mo.reduce((a,b)=>a+(+b.total||0),0))}</b></div>
+    <div class="stat"><small>${pend?`Profit, completed · ${pend} cost${pend>1?'s':''} estimated`:'Actual profit, completed'}</small><b class="${done.length?(done.reduce((s,a)=>s+a.profit,0)<0?'bad':'good'):''}">${done.length?peso(done.reduce((s,a)=>s+a.profit,0)):'—'}</b></div></div>`;
   if(!jobs.length){ $('#jobsBody').innerHTML=stats+`<div class="group"><div class="empty-state"><b>No tow jobs yet</b>Price a tow, tap Book, and the job shows up here.</div></div><div class="sync" id="syncNote"></div>`; syncNote(); return; }
   const fmt=d=>new Date(d).toLocaleString('en-PH',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const detail=b=>{
+    const A=b.assump, est=b.est;
+    const head=`<div style="padding:0 16px 10px;line-height:1.5" class="calc">${esc(b.vehicle)} · ${esc(b.condition)}${b.plate?' · '+esc(b.plate):''}<br>${b.pickup||b.dropoff?esc(b.homeBase?b.homeBase+' → ':'')+esc(b.pickup||'?')+' → '+esc(b.dropoff||'?')+'<br>':''}${num(b.kmDriven,1)} km driven (${num(b.kmOut,1)} + ${num(b.kmTowed,1)} + ${num(b.kmBack,1)})${b.phone?' · '+esc(b.phone):''}<br>`+
+      (est?`Quoted ${peso(b.total)}${b.priceManual?` (rate card ${peso(b.rateCard)})`:''} · est. cost ${peso(est.total)} · <span class="${b.estProfit<0?'bad':'good'}">est. profit ${peso(b.estProfit)} (${pct(b.estMargin)})</span><br>Diesel ${peso(A.diesel,2)}/L at ${num(A.kmpl)} km/L = ${num(est.litres,1)} L · ${est.shifts} crew shift${est.shifts>1?'s':''}${est.items.some(i=>i.off)?'<br>Left out of the cost: '+est.items.filter(i=>i.off).map(i=>esc(i.name)).join(', '):''}`
+          :`Quoted ${peso(b.total)} · saved before costs were tracked, so there’s no estimate`)+`</div>`;
+    const segs=`<div class="segs" style="padding-top:0">${['Quoted','Dispatched','Completed','Cancelled'].map(s=>`<button class="seg ${b.status===s?'on':''}" data-status="${s}" data-for="${esc(b.ref)}">${s==='Dispatched'?'Dispatch':s==='Completed'?'Done':s==='Cancelled'?'Cancel':'Quote'}</button>`).join('')}<button class="seg del ${delSure===b.ref?'sure':''}" data-deljob="${esc(b.ref)}">${delSure===b.ref?'Delete?':'Delete'}</button></div>`;
+    if(b.status!=='Dispatched'&&b.status!=='Completed') return head+segs;
+    const amt=(b.actual&&b.actual.amounts)||{};
+    const items=jobItems(b);
+    const inputs=items.map(it=>it.kind==='alloc'
+      ?`<div class="r"><span class="n">${esc(it.name)}<span class="tag">set aside</span><span class="calc">carried from the estimate, not paid on the day</span></span><span class="v">${peso(it.amount,2)}</span></div>`
+      :`<div class="r"><span class="n">${esc(it.name)}<span class="calc">${it.optional?'anything not planned':it.amount==null?'no estimate':'estimate '+peso(it.amount,2)}</span></span><input class="ed" inputmode="decimal" id="act-${esc(b.ref)}-${esc(it.key)}" data-act="${esc(b.ref)}" data-key="${esc(it.key)}" value="${esc(amt[it.key]??'')}" placeholder="${it.amount==null?'₱':Math.round(it.amount)}" aria-label="Actual ${esc(it.name)}"></div>`).join('');
+    return head+segs+`<div class="glabel" style="padding-top:6px">What it really cost</div>${inputs}
+      <div class="r"><span class="n">Amount collected<span class="calc">what the customer paid${b.vat?', without VAT':''}</span></span><input class="ed" inputmode="decimal" id="act-${esc(b.ref)}-collected" data-act="${esc(b.ref)}" data-key="collected" value="${esc((b.actual&&b.actual.collected)??'')}" placeholder="${Math.round(b.netRevenue??b.total)}" aria-label="Amount collected"></div>
+      <div id="jr-${esc(b.ref)}">${jobResultHtml(b)}</div>`;
+  };
   const rows=jobs.map(b=>`<button class="r" data-ref="${esc(b.ref)}"><span class="n">${esc(b.customer||b.plate||b.vehicle)}<span class="calc">${esc(b.ref)} · ${fmt(b.at)} · ${esc(b.unit)}</span></span><span class="pill ${esc(b.status)}">${esc(b.status)}</span><span class="v" style="color:var(--fg);min-width:74px;text-align:right">${peso(b.total)}</span></button>
-    ${expanded===b.ref?`<div style="padding:0 16px 10px;line-height:1.5" class="calc">${esc(b.vehicle)} · ${esc(b.condition)}${b.plate?' · '+esc(b.plate):''}<br>${b.pickup||b.dropoff?esc(b.pickup||'?')+' → '+esc(b.dropoff||'?')+'<br>':''}${num(b.kmTowed,1)} km towed · ${num(b.kmDriven,1)} km driven · ${num(b.litres,1)} L<br>Tow ${peso(b.tow)} · Fuel ${peso(b.fuel)} · Fees ${peso(b.fees)}${b.discount?' · '+esc(b.discount):''}${b.phone?'<br>'+esc(b.phone):''}</div>
-    <div class="segs" style="padding-top:0">${['Dispatched','Completed','Cancelled'].map(s=>`<button class="seg ${b.status===s?'on':''}" data-status="${s}" data-for="${esc(b.ref)}">${s}</button>`).join('')}<button class="seg del ${delSure===b.ref?'sure':''}" data-deljob="${esc(b.ref)}">${delSure===b.ref?'Delete?':'Delete'}</button></div>`:''}`).join('');
-  $('#jobsBody').innerHTML=stats+`<div class="group">${rows}</div><button class="wide-btn ghost" id="copySheets">Copy all for Google Sheets</button><div class="gnote" style="margin:8px 0 0">Tab-separated, one job per row, oldest first.</div><div class="sync" id="syncNote"></div>`;
+    ${expanded===b.ref?detail(b):''}`).join('');
+  $('#jobsBody').innerHTML=stats+(quotes?`<div class="gnote" style="margin:-12px 0 12px">${quotes} quote${quotes>1?'s':''} waiting for an answer.</div>`:'')+`<div class="group">${rows}</div><button class="wide-btn ghost" id="copySheets">Copy all for Google Sheets</button><div class="gnote" style="margin:8px 0 0">Tab-separated, one job per row, oldest first.</div><div class="sync" id="syncNote"></div>`;
   syncNote();
 }
+$('#jobsBody').addEventListener('input',e=>{
+  const t=e.target, ref=t.dataset.act; if(!ref) return;
+  const b=jobs.find(x=>x.ref===ref); if(!b) return;
+  b.actual=b.actual||{amounts:{},collected:''}; b.actual.amounts=b.actual.amounts||{};
+  const val=t.value.replace(/[^\d.]/g,'');
+  if(t.dataset.key==='collected') b.actual.collected=val; else if(val==='') delete b.actual.amounts[t.dataset.key]; else b.actual.amounts[t.dataset.key]=val;
+  b.updatedAt=new Date().toISOString(); patchJob();
+  const box=document.getElementById('jr-'+ref); if(box) box.innerHTML=jobResultHtml(b);
+});
 $('#openJobs').addEventListener('click',()=>{ renderJobs(); showSheet('sJobs'); });
 $('#jobsBody').addEventListener('click',async e=>{
   const r=e.target.closest('[data-ref]'), st=e.target.closest('[data-status]'), del=e.target.closest('[data-deljob]');
-  if(st){ const b=jobs.find(x=>x.ref===st.dataset.for); if(b&&b.status!==st.dataset.status){ b.status=st.dataset.status; await patchJob(b.ref,{status:b.status}); renderJobs(); } return; }
+  if(st){ const b=jobs.find(x=>x.ref===st.dataset.for); if(b&&b.status!==st.dataset.status){ b.status=st.dataset.status; b.updatedAt=new Date().toISOString(); await patchJob(b.ref,{status:b.status}); renderJobs(); } return; }
   if(del){ const ref=del.dataset.deljob; if(delSure!==ref){ delSure=ref; renderJobs(); return; } delSure=null; expanded=null; await removeJob(ref); renderJobs(); toast(`${esc(ref)} deleted`); return; }
   if(r){ expanded=expanded===r.dataset.ref?null:r.dataset.ref; delSure=null; renderJobs(); return; }
   if(e.target.id==='copySheets'){
     const f=d=>{ const x=new Date(d),p=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${p(x.getMonth()+1)}-${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`; };
     const clean=s=>String(s??'').replace(/[\t\n]/g,' ');
-    const head=['Ref','Date','Customer','Phone','Plate','Pickup','Drop-off','Unit','Unit type','Vehicle','Condition','Weather','Night','km to pickup','km towed','km return','km driven','Diesel L','Tow ₱','Fuel ₱','Fees ₱','Discount','Total ₱','Status'];
-    const tsv=[head.join('\t'),...[...jobs].reverse().map(b=>[b.ref,f(b.at),b.customer,b.phone,b.plate,b.pickup,b.dropoff,b.unit,b.unitType,b.vehicle,b.condition,b.weather,b.night?'Yes':'No',b.kmOut,b.kmTowed,b.kmBack,b.kmDriven,b.litres,b.tow,b.fuel,b.fees,b.discount,b.total,b.status].map(clean).join('\t'))].join('\n');
+    const head=['Ref','Date','Customer','Phone','Plate','Pickup','Drop-off','Unit','Unit type','Vehicle','Condition','Weather','Night','km to pickup','km towed','km return','km driven','Diesel L billed','Tow ₱','Fuel ₱','Fees ₱','Discount','Quoted ₱','Status',
+      'Rate card ₱','Diesel ₱/L','km/L','Diesel L used','Crew shifts','Est cash cost ₱','Est set aside ₱','Est cost ₱','Est profit ₱','Est margin %','Collected ₱','Actual cost ₱','Actual profit ₱','Costs still estimated'];
+    const tsv=[head.join('\t'),...[...jobs].reverse().map(b=>{ const a=jobActual(b), E=b.est, A=b.assump||{};
+      return [b.ref,f(b.at),b.customer,b.phone,b.plate,b.pickup,b.dropoff,b.unit,b.unitType,b.vehicle,b.condition,b.weather,b.night?'Yes':'No',b.kmOut,b.kmTowed,b.kmBack,b.kmDriven,b.litres,b.tow,b.fuel,b.fees,b.discount,b.total,b.status,
+        b.rateCard??'',A.diesel??'',A.kmpl??'',E?E.litres:'',E?E.shifts:'',E?E.cash:'',E?E.alloc:'',E?E.total:'',b.estProfit??'',b.estMargin??'',
+        a.collected??'',a.collected===null?'':r2(a.cost),a.profit===null?'':r2(a.profit),a.collected===null?'':a.pending].map(clean).join('\t'); })].join('\n');
     try{ await navigator.clipboard.writeText(tsv); toast('<span class="ok">✓</span>Copied '+jobs.length+' jobs'); }
     catch(err){ const ta=document.createElement('textarea'); ta.value=tsv; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('Copied'); }catch(_){ toast('Copy not allowed here'); } ta.remove(); }
   }
@@ -696,9 +928,16 @@ async function putJob(rec){ jobs=[rec,...jobs.filter(b=>b.ref!==rec.ref)]; LS.se
 async function patchJob(){ LS.set('gtt.jobs',jobs); }
 async function removeJob(ref){ jobs=jobs.filter(b=>b.ref!==ref); LS.set('gtt.jobs',jobs); }
 function setSave(cls,txt){ const el=$('#saveState'); if(el){ el.className='savestate '+cls; el.textContent=txt; } }
+function mergeJobs(mine,theirs){
+  const map=new Map(mine.map(j=>[j.ref,j])); let added=0, updated=0;
+  const stamp=j=>Date.parse(j.updatedAt||j.at)||0;
+  for(const j of theirs){ if(!j||!j.ref) continue; const cur=map.get(j.ref);
+    if(!cur){ map.set(j.ref,j); added++; } else if(stamp(j)>stamp(cur)){ map.set(j.ref,j); updated++; } }
+  return {jobs:[...map.values()].sort((a,b)=>(Date.parse(b.at)||0)-(Date.parse(a.at)||0)),added,updated};
+}
 function exportData(){
   const d=new Date(), p=n=>String(n).padStart(2,'0');
-  const blob=new Blob([JSON.stringify({app:'gt-towing',version:1,savedAt:d.toISOString(),rates:R,jobs},null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'gt-towing',version:2,savedAt:d.toISOString(),rates:R,jobs},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`gt-towing-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
   LS.set('gtt.lastBackup',Date.now()); syncNote(); toast('<span class="ok">✓</span>Backup saved to Downloads');
@@ -706,8 +945,10 @@ function exportData(){
 $('#importFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{ const d=JSON.parse(await f.text()); if(d.app!=='gt-towing'||!d.rates) throw 0;
-    R=normRates(d.rates); jobs=Array.isArray(d.jobs)?d.jobs:[]; saveRates(); LS.set('gtt.jobs',jobs);
-    renderRates(); render(); toast(`<span class="ok">✓</span>Restored ${jobs.length} job${jobs.length===1?'':'s'}`);
+    /* Rates come from the backup. Jobs are merged: nothing on this phone is deleted; for a job in both, the newer edit wins. */
+    const merged=mergeJobs(jobs,Array.isArray(d.jobs)?d.jobs:[]);
+    R=normRates(d.rates); jobs=merged.jobs; saveRates(); LS.set('gtt.jobs',jobs);
+    renderRates(); render(); toast(`<span class="ok">✓</span>Rates restored · ${merged.added} new job${merged.added===1?'':'s'}, ${merged.updated} updated`);
   }catch(_){ toast('That file is not a GT Towing backup'); }
 });
 $('#ratesBody').addEventListener('click',async e=>{
