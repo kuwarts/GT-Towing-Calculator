@@ -52,6 +52,6 @@ UPDATING THE APP ON GITHUB
 1. Unzip the update on your computer. Open the folder.
 2. On GitHub: Code > Add file > Upload files.
 3. Drag in the FILES (not the zip, not the folder). Click "Commit changes".
-4. Check sw.js on GitHub shows the new version number (e.g. gt-towing-v3).
+4. Check sw.js on GitHub shows the new version number (e.g. gt-towing-v4).
 5. Wait for the green tick under Actions, then open the app with internet.
-For the next change, raise the number in sw.js (v3 → v4) so phones pick it up.
+For the next change, raise the number in sw.js (v4 → v5) so phones pick it up.

@@ -752,9 +752,19 @@ $('#profitBody').addEventListener('click',e=>{
 });
 
 /* ---------- fleet & rates ---------- */
+/* One switch per cost factor, same keys as the Cost & profit screen. */
+function factorGroup(){
+  const f=[{key:'fuel',name:'Diesel',sub:'km driven ÷ km per litre × diesel price'},{key:'tolls',name:'Tolls & parking',sub:'entered per job'},
+    ...R.crew.filter(c=>c.role).map(c=>({key:'crew:'+c.role,name:c.role,sub:`crew pay · ${peso((+c.basic||0)+(+c.meal||0))} per shift`})),
+    ...R.costLines.filter(l=>l.name).map(l=>({key:'line:'+l.name,name:l.name,sub:`${l.kind==='alloc'?'set aside':'cash'} · ${peso(l.amt,2)} ${l.basis==='km'?'per km':'per trip'}`}))];
+  return `<div class="glabel">Cost factors to include</div><div class="group">${f.map(x=>{ const off=!!R.costOff[x.key];
+    return `<div class="r ${off?'offrow':''}"><span class="n">${esc(x.name)}<span class="calc">${off?'off · not counted in the cost':esc(x.sub)}</span></span><button class="sw sm" data-offr="${esc(x.key)}" aria-pressed="${!off}" aria-label="Include ${esc(x.name)}"></button></div>`; }).join('')}</div>
+    <div class="gnote">Switched-off costs are left out of the cost, break-even, price targets and profit for new quotes. Saved jobs keep what they were quoted with. The same switches are on the Cost &amp; profit screen.</div>`;
+}
 function renderRates(){
   let html='';
   for(const [lk,L] of Object.entries(LISTS)){
+    if(lk==='crew') html+=factorGroup();
     const items=R[lk].map((it,i)=>`<div class="item"><div class="item-h"><b>${esc(itemTitle(lk,it))}</b><button class="x" data-del="${lk}:${i}">Remove</button></div>
       <div class="fgrid">${L.fields.map(([k,lab,ty,span,opts])=>`<label class="${span||''}">${lab}${ty==='sel'
         ?`<select id="f-${lk}-${i}-${k}" data-f="${lk}:${i}:${k}">${opts.map(([v,t])=>`<option value="${v}" ${it[k]===v?'selected':''}>${t}</option>`).join('')}</select>`
@@ -794,7 +804,8 @@ $('#ratesBody').addEventListener('input',onRatesInput);
 $('#ratesBody').addEventListener('change',e=>{ if(e.target.tagName==='SELECT') onRatesInput(e); });
 let delArm=null;
 $('#ratesBody').addEventListener('click',e=>{
-  const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]');
+  const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]'), fo=e.target.closest('[data-offr]');
+  if(fo){ const k=fo.dataset.offr; if(R.costOff[k]) delete R.costOff[k]; else R.costOff[k]=true; saveRates(); const y=$('#ratesBody').scrollTop; renderRates(); $('#ratesBody').scrollTop=y; render(); return; }
   if(d){ if(delArm!==d.dataset.del){ delArm=d.dataset.del; d.textContent='Tap to confirm'; setTimeout(()=>{ if(delArm===d.dataset.del){ delArm=null; if(d.isConnected) d.textContent='Remove'; } },2500); return; }
     delArm=null; const [lk,i]=d.dataset.del.split(':'); R[lk].splice(+i,1); saveRates(true); renderRates(); render(); return; }
   if(ad){ const lk=ad.dataset.addrow; R[lk].push(clone(LISTS[lk].blank)); renderRates(); $(`#f-${lk}-${R[lk].length-1}-${LISTS[lk].fields[0][0]}`)?.focus(); return; }
