@@ -34,6 +34,13 @@ It works like a calculator: you type the distances on the keypad and the price u
 |---|---|
 | **Android** | Open the link in **Chrome** → tap **⋮** → **Install app** (or **Add to Home screen**) → **Install**. |
 | **iPhone** | Open the link in **Safari** (not Chrome) → tap **Share** (square with an arrow) → **Add to Home Screen** → **Add**. |
+| **Honor, Samsung, Xiaomi, Oppo, Vivo** | Same as Android: use **Chrome** for the full app. In the phone's own browser you can still use its menu → **Add to home screen**. |
+
+The app shows the right steps for your phone: tap the grey line under the top buttons (**Install as app on this phone ›**), or go to **Fleet & rates → This phone**.
+
+**Works on any size of phone**, from small 320-pixel-wide phones to large Android phones. The **Back** button or gesture closes the open screen instead of leaving the app.
+
+**Phone cleaner apps** (Honor and Huawei Phone Manager, Xiaomi Security, and others) can erase saved data if they clear the browser's storage. Don't let them clear Chrome's site data. The app reminds you to back up when it's been more than 7 days.
 
 The GT icon appears on the home screen. It opens full screen and works without internet after the first open.
 
@@ -385,12 +392,12 @@ The profit will be lower once tolls and maintenance, tire and depreciation amoun
 | `index.html` | All screens and the rate card price |
 | `finance.js` | Every cost and profit formula, as plain functions with no screen code |
 | `islands.js` | Place name → island, and sea crossings between legs |
-| `sw.js` | Offline support; the cache name (`gt-towing-v6`) must go up with every update |
+| `sw.js` | Offline support; the cache name (`gt-towing-v7`) must go up with every update |
 | `manifest.webmanifest` | App name, colours and icons |
 | `icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon.png` | Official GT logo icons; keep them in the main folder |
 
 - **Branches:** `main` is the original app; `v3` is this version. GitHub Pages serves whichever branch is chosen in **Settings → Pages**.
-- **Updating:** change the files, raise the number in `sw.js` (`gt-towing-v6` → `gt-towing-v7`), then commit. Phones pick up the new version the next time they open the app with internet.
+- **Updating:** change the files, raise the number in `sw.js` (`gt-towing-v7` → `gt-towing-v8`), then commit. Phones pick up the new version the next time they open the app with internet.
 - **Saved data on the phone** uses the keys `gtt.rates`, `gtt.jobs`, `gtt.draft`, `gtt.device` and `gtt.lastBackup`. New versions must only **add** to these, never reset them, so nobody loses jobs.
 - **Same website, same data:** every copy of the app under `kuwarts.github.io` shares the same saved data on a phone. An older copy that saves settings drops newer settings (crew pay, cost switches, routes). Back up before testing another copy.
 

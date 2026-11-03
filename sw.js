@@ -1,6 +1,6 @@
 // GT Towing offline support.
 // When you change index.html, bump the version number so phones pick up the new copy.
-const CACHE = 'gt-towing-v6';
+const CACHE = 'gt-towing-v7';
 const SHELL = [
   './',
   './index.html',

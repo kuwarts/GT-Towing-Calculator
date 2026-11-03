@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="description" content="GT Auto towing quote calculator">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -28,6 +28,7 @@
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;background:var(--bg);color:var(--fg)}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--red-ink);outline-offset:2px}
@@ -55,7 +56,7 @@ input{font:inherit;color:inherit;user-select:text;-webkit-user-select:text}
 .display{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;text-align:right;gap:2px;padding:0 6px 4px}
 .meta{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .meta .warn{color:var(--warn)}
-.savestate{font-size:11px;color:var(--muted);margin-bottom:auto;padding-top:2px}
+.savestate{display:block;border-radius:8px;padding:2px 6px;margin-right:-6px;font-size:11px;color:var(--muted);margin-bottom:auto;padding-top:2px}
 .savestate.ok{color:var(--good)}.savestate.local{color:var(--warn)}
 .split{font-size:14px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;border-radius:12px;padding:3px 8px;margin-right:-8px;font-variant-numeric:tabular-nums;max-width:calc(100% + 8px)}
 .split>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -97,7 +98,7 @@ input{font:inherit;color:inherit;user-select:text;-webkit-user-select:text}
 /* sheets */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .35s;z-index:20}
 .scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:430px;max-height:90%;background:var(--sheet);border-radius:14px 14px 0 0;z-index:21;display:flex;flex-direction:column;
+.sheet{position:fixed;left:0;right:0;bottom:var(--kb,0px);margin:0 auto;max-width:430px;max-height:min(90%,calc(var(--vvh,100dvh) * .92));background:var(--sheet);border-radius:14px 14px 0 0;z-index:21;display:flex;flex-direction:column;
   transform:translateY(105%);transition:transform .42s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom,0px)}
 .sheet.on{transform:none}
 .grab{padding:8px 0 2px;display:grid;place-items:center;touch-action:none}
@@ -153,7 +154,7 @@ button.r:active{background:var(--row-hi)}
 .fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .fgrid label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);min-width:0}
 .fgrid label.wide{grid-column:span 2}.fgrid label.full{grid-column:1/-1}
-.fgrid input{width:100%;background:var(--field);border:1px solid transparent;border-radius:8px;padding:7px 8px;font-size:15px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.fgrid input{width:100%;background:var(--field);border:1px solid transparent;border-radius:8px;padding:7px 8px;font-size:16px;font-variant-numeric:tabular-nums;color:var(--fg)}
 .pill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px}
 .pill.Dispatched{background:rgba(225,3,15,.2);color:var(--red-ink)}
 .pill.Completed{background:rgba(48,209,88,.16);color:var(--good)}
@@ -171,8 +172,13 @@ button.r:active{background:var(--row-hi)}
 .r .v.fg{color:var(--fg)}
 .use{font-size:13px;color:var(--red-ink);font-weight:600;padding:4px 0 4px 6px}
 .tag{white-space:nowrap;display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:6px;background:#3a3a40;color:var(--soft);margin-left:6px;vertical-align:1px}
-.fgrid select,.ed.sel{width:100%;background:var(--field);border:1px solid transparent;border-radius:8px;padding:7px 6px;font-size:15px;color:var(--fg);font-family:inherit}
+.fgrid select,.ed.sel{width:100%;background:var(--field);border:1px solid transparent;border-radius:8px;padding:7px 6px;font-size:16px;color:var(--fg);font-family:inherit}
 .errline{color:var(--warn);font-size:12px;display:block}
+/* iPhone zooms into any box under 16px; ".r .s" (small grey text) also matched some boxes. */
+.r input.ed,.r select.ed,.fgrid input,.fgrid select,input.txt{font-size:16px}
+/* The top bar always stays on top and tappable, even on very short screens. */
+.top{position:relative;z-index:3;background:var(--bg)}
+
 .sw.sm{width:42px;height:26px}
 .sw.sm::after{width:22px;height:22px}
 .sw.sm[aria-pressed="true"]::after{transform:translateX(16px)}
@@ -192,6 +198,15 @@ button.r:active{background:var(--row-hi)}
 .toast .ok{color:var(--good);margin-right:6px}
 .sync{font-size:12px;color:#66666c;text-align:center;padding:6px 0 0}
 @media (max-height:740px){.total{font-size:62px}.k{font-size:28px}.chip{padding:5px 12px}.chip>span{font-size:14px}}
+/* Very short screens (e.g. 320×568): smaller keys and chips so the price area fits. */
+@media (max-height:620px){
+  .app{padding-block:4px 8px}.top{min-height:40px}.savestate{padding-top:0;line-height:1.2}.display{gap:0}
+  .pad{--ks:max(40px,min(64px,calc((100dvh - 400px)/5)));gap:5px 10px;margin-top:6px}
+  .chips{gap:6px;margin-top:4px}.chip{padding:4px 10px;border-radius:12px}.chip>span{font-size:13px}.chip small{font-size:10px}
+  .total{font-size:48px}.meta,.split{font-size:12px}.pl{font-size:12px}.k{font-size:24px}.k.op{font-size:28px}.k.fn{font-size:18px}.k.next{font-size:11px}
+}
+/* Narrow phones (under 350px wide): keep the logo, drop the words beside it. */
+@media (max-width:349px){.word{display:none}.k.next{font-size:11px;letter-spacing:-.01em}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -210,7 +225,7 @@ button.r:active{background:var(--row-hi)}
   </div>
 
   <div class="display">
-    <div class="savestate ok" id="saveState">✓ Saved on this phone</div>
+    <button class="savestate ok" id="saveState">✓ Saved on this phone</button>
     <div class="meta" id="meta">&nbsp;</div>
     <button class="split" id="openBreak" aria-label="Price breakdown"><span id="split">&nbsp;</span><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" style="flex:none"><path d="M1.5 1.5l5 5-5 5"/></svg></button>
     <div class="total" id="total"><span class="cur">₱</span>0</div>
@@ -495,8 +510,13 @@ document.addEventListener('keydown',e=>{
 document.querySelectorAll('[data-field]').forEach(b=>b.addEventListener('click',()=>{ const f=b.dataset.field; if(S.active!==f){ if(S[S.active]) S[S.active]=String(ev(S[S.active])); S.active=f; fresh=true; render(); lit(''); } }));
 
 /* ---------- sheets ---------- */
-function showSheet(id){ if(openSheet) $('#'+openSheet).classList.remove('on'); openSheet=id; $('#'+id).classList.add('on'); $('#scrim').classList.add('on'); }
-function closeSheet(){ if(!openSheet) return; $('#'+openSheet).classList.remove('on'); $('#scrim').classList.remove('on'); const was=openSheet; openSheet=null; document.activeElement?.blur?.(); if(was==='sRates') saveRates(true); render(); }
+let sheetHist=false;
+function showSheet(id){ if(!openSheet&&!sheetHist){ try{ history.pushState({gtSheet:1},''); sheetHist=true; }catch(_){} }
+  if(openSheet) $('#'+openSheet).classList.remove('on'); openSheet=id; $('#'+id).classList.add('on'); $('#scrim').classList.add('on'); }
+function closeSheet(fromBack){ if(!openSheet) return; $('#'+openSheet).classList.remove('on'); $('#scrim').classList.remove('on'); const was=openSheet; openSheet=null; document.activeElement?.blur?.(); if(was==='sRates') saveRates(true);
+  if(sheetHist){ sheetHist=false; if(fromBack!==true){ try{ history.back(); }catch(_){} } }
+  render(); }
+window.addEventListener('popstate',()=>{ if(openSheet){ sheetHist=false; closeSheet(true); } });
 $('#scrim').addEventListener('click',closeSheet);
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheet));
 document.querySelectorAll('.sheet').forEach(sh=>{
@@ -849,14 +869,14 @@ function renderRates(){
   html+=islandGroup();
   html+=`<div class="glabel">Pricing, fuel, time &amp; fees</div><div class="group">${FEES.map(([k,lab,sub,ty])=>`<div class="r"><span class="n">${lab}<span class="calc">${sub}</span></span><input class="ed ${ty==='t'?'w':''}" ${ty==='t'?'':'inputmode="decimal"'} id="fee-${k}" data-fee="${k}" value="${esc(R.fees[k])}" ${k==='homeBase'?'placeholder="e.g. Maroroy, Daraga"':''}></div>`).join('')}</div>
     <div class="gnote">Saved jobs keep the prices, costs and rates they were quoted with.</div>
-    <div class="glabel">This phone</div>
+    <div class="glabel" id="thisPhone">This phone</div>
     <div class="group">
       <div class="r"><span class="n">Phone code<span class="calc">goes in job numbers so two phones never share one</span></span><input class="ed s" id="phoneCode" maxlength="4" value="${esc(deviceCode())}" autocapitalize="characters"></div>
-      <button class="r add" id="installApp" ${installEvt?'':'hidden'}>Install as app on this phone</button>
+      ${(()=>{ const st=installSteps(); return `<div class="r"><span class="n">${st.done?'Installed on this phone':'Install on this phone'}<span class="calc">${esc(st.text)}</span></span>${st.button?'<button class="use" id="installApp">Install</button>':st.done?'<span class="s good">✓</span>':''}</div>`; })()}
       <button class="r add" id="exportData">Back up rates and jobs</button>
       <button class="r add" id="importData">Restore from a backup file</button>
     </div>
-    <div class="gnote">Everything is saved on this phone only; nothing syncs between phones. Back up once a week and keep the file in Google Drive or Messenger. Restoring replaces the rates and adds the backup’s jobs without deleting any on this phone.</div>
+    <div class="gnote">Everything is saved on this phone only; nothing syncs between phones. Back up once a week and keep the file in Google Drive or Messenger. Restoring replaces the rates and adds the backup’s jobs without deleting any on this phone.<br><br>If your phone has a cleaner or phone manager app (Honor, Huawei, Xiaomi, Oppo, Vivo and others), don’t let it clear the browser’s site data or storage: that erases the app’s rates and jobs.</div>
     <button class="wide-btn ghost" id="resetRates">Restore sample rates</button><div class="sync" id="syncNote"></div>`;
   $('#ratesBody').innerHTML=html; syncNote();
 }
@@ -1008,8 +1028,30 @@ $('#jobsBody').addEventListener('click',async e=>{
 
 /* ---------- storage: this phone (localStorage), with backup files ---------- */
 let installEvt=null;
-window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; const b=$('#installApp'); if(b) b.hidden=false; });
-window.addEventListener('appinstalled',()=>{ installEvt=null; toast('<span class="ok">✓</span>GT Towing installed'); });
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; if(openSheet==='sRates') renderRates(); updateStatus(); });
+window.addEventListener('appinstalled',()=>{ installEvt=null; toast('<span class="ok">✓</span>GT Towing installed'); if(openSheet==='sRates') renderRates(); updateStatus(); });
+/* Which phone and browser this is, for install steps. */
+function phoneInfo(){ const ua=navigator.userAgent||'';
+  const ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1), android=/Android/i.test(ua);
+  let standalone=false; try{ standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(_){}
+  const otherBrowser=/SamsungBrowser|HuaweiBrowser|HonorBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser|OPR\/|UCBrowser|EdgA|Firefox|FBAN|FBAV|Instagram|Line\//i.test(ua);
+  return {ios,android,standalone,mobile:ios||android,iosSafari:ios&&!/CriOS|FxiOS|EdgiOS|OPiOS|FBAN|FBAV|Instagram/.test(ua),chrome:android&&/Chrome\//.test(ua)&&!otherBrowser}; }
+function installSteps(){ const P=phoneInfo();
+  if(P.standalone) return {done:true,text:'Opened from the home screen icon.'};
+  if(P.ios) return P.iosSafari?{text:'Tap Share (the square with an arrow) → Add to Home Screen → Add.'}:{text:'Open this page in Safari, then tap Share → Add to Home Screen → Add. Other iPhone browsers can’t install it.'};
+  if(P.android){ if(installEvt) return {button:true,text:'Adds the GT icon to your home screen. Works without internet.'};
+    if(P.chrome) return {text:'Tap ⋮ (top right) → Install app (or Add to Home screen).'};
+    return {text:'For the full app, open this link in Chrome and tap ⋮ → Install app. In this browser: menu → Add to home screen.'}; }
+  return {text:'Open the app link on your phone to install it.'}; }
+/* Status line under the top bar: backup reminder, then install hint, then "saved". Tap it to go to This phone. */
+let statusAction='', storageBroken=false;
+function backupDue(){ const last=LS.get('gtt.lastBackup',0), since=LS.get('gtt.since',0), ref=last||since;
+  return !!ref && (jobs.length>0||!!LS.get('gtt.rates',null)) && Date.now()-ref>7*864e5; }
+function updateStatus(){ if(storageBroken) return; const P=phoneInfo();
+  if(backupDue()){ statusAction='phone'; setSave('local',`⚠ Back up your data · last backup ${ago(LS.get('gtt.lastBackup',0))} ›`); }
+  else if(P.mobile&&!P.standalone){ statusAction='phone'; setSave('','Install as app on this phone ›'); }
+  else { statusAction=''; setSave('ok','✓ Saved on this phone'); } }
+$('#saveState').addEventListener('click',()=>{ if(!statusAction) return; renderRates(); showSheet('sRates'); setTimeout(()=>$('#thisPhone')?.scrollIntoView({block:'start'}),450); });
 function ago(t){ if(!t) return 'never'; const d=Math.floor((Date.now()-t)/86400000); return d<=0?'today':d===1?'yesterday':d+' days ago'; }
 function syncNote(){ const n=$('#syncNote'); if(n) n.textContent='Saved on this phone · last backup '+ago(LS.get('gtt.lastBackup',0)); }
 function saveRates(){ LS.set('gtt.rates',R); }
@@ -1029,7 +1071,7 @@ function exportData(){
   const blob=new Blob([JSON.stringify({app:'gt-towing',version:2,savedAt:d.toISOString(),rates:R,jobs},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`gt-towing-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
-  LS.set('gtt.lastBackup',Date.now()); syncNote(); toast('<span class="ok">✓</span>Backup saved to Downloads');
+  LS.set('gtt.lastBackup',Date.now()); syncNote(); updateStatus(); toast('<span class="ok">✓</span>Backup saved to Downloads');
 }
 $('#importFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
@@ -1043,13 +1085,27 @@ $('#importFile').addEventListener('change',async e=>{
 $('#ratesBody').addEventListener('click',async e=>{
   if(e.target.id==='exportData') exportData();
   else if(e.target.id==='importData') $('#importFile').click();
-  else if(e.target.id==='installApp'&&installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(_){} installEvt=null; e.target.hidden=true; }
+  else if(e.target.id==='installApp'&&installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(_){} installEvt=null; renderRates(); updateStatus(); }
 });
+const APP_VERSION='7';
 async function boot(){
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
-  try{ LS.set('gtt.probe',1); if(localStorage.getItem('gtt.probe')!=='1') throw 0; }catch(_){ setSave('local','⚠ This browser is not saving. Open it in Chrome.'); return; }
+  if('serviceWorker' in navigator){ const had=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(had) toast('New version ready · close and reopen the app'); }); }
+  try{ LS.set('gtt.probe',1); if(localStorage.getItem('gtt.probe')!=='1') throw 0; }catch(_){ storageBroken=true; setSave('local','⚠ This browser is not saving. Open it in Chrome (Android) or Safari (iPhone).'); return; }
+  if(!LS.get('gtt.since',0)) LS.set('gtt.since',Date.now());
+  const ver=LS.get('gtt.ver',null); if(ver&&ver!==APP_VERSION) setTimeout(()=>toast('<span class="ok">✓</span>Updated to the latest version'),700); LS.set('gtt.ver',APP_VERSION);
+  updateStatus();
   try{ if(navigator.storage?.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); }catch(_){}
 }
+/* Keyboard: keep sheets above it and the box being typed in visible. */
+(()=>{ const vv=window.visualViewport, root=document.documentElement;
+  const fit=()=>{ if(!vv) return; root.style.setProperty('--vvh',vv.height+'px'); root.style.setProperty('--kb',Math.max(0,innerHeight-vv.height-vv.offsetTop)+'px'); };
+  if(vv){ vv.addEventListener('resize',fit); vv.addEventListener('scroll',fit); fit(); }
+  document.addEventListener('focusin',e=>{ const t=e.target; if(!t.matches||!t.matches('input,select')||!t.closest('.sheet')) return;
+    setTimeout(()=>{ try{ t.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){} },320); });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') updateStatus(); });
+})();
 
 let tt=null;
 function toast(html){ const t=$('#toast'); t.innerHTML=html; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2400); }
