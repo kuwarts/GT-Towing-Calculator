@@ -305,7 +305,7 @@ const DEFAULT_RATES = {
   routes:[],
   /* Cost factors switched off, by key (e.g. 'tolls', 'crew:Helper'). Empty = every cost counts. */
   costOff:{},
-  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12,homeBase:'',shiftHours:8,markup:25,margin:20}
+  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12,homeBase:'',shiftHours:8,markup:25,margin:20,crewByKm:0,kmPerDay:180}
 };
 const LISTS = {
   units:{label:'Tow units',add:'Add tow unit',sel:'unit',key:'code',blank:{code:'',name:'',type:'Flatbed',cap:0,base:0,lkm:0,ekm:0,incl:0,kmpl:0},
@@ -396,7 +396,7 @@ function quote(){
   /* Quoted price: the owner's own figure if typed, otherwise the rate card. */
   const manual=String(S.price||'').trim()!=='', total=manual?Math.max(0,ev(S.price)):rateCard;
   /* Operating cost: fuel on EVERY km driven (the return burns diesel even when it isn't billed), crew per shift, trip costs. */
-  const est=FIN.estimateCost({kmDriven:driven,kmpl,diesel,tolls,hours,shiftHours:F.shiftHours,shifts:S.shifts,crew:R.crew,lines:R.costLines,off:R.costOff});
+  const est=FIN.estimateCost({kmDriven:driven,kmpl,diesel,tolls,hours,shiftHours:F.shiftHours,shifts:S.shifts,crew:R.crew,lines:R.costLines,off:R.costOff,crewByKm:!!+F.crewByKm,kmPerDay:F.kmPerDay});
   const netRev=FIN.netRevenue(total,S.vat,F.vat), pl=FIN.evaluate(netRev,est.total,driven), targets=FIN.priceTargets(est.total,F.markup,F.margin);
   const bad=FIELDS.filter(f=>evx(S[f]).bad);
   return {u,v,c,w,d,out,tow,back,stopKm,loaded,empty,driven,charged,mult,baseFee,lkm,ekm,incl,kmpl,diesel,hook,towed,deadhead,litres,fuel,condFee,extras,waitMin,waiting,
@@ -674,7 +674,7 @@ function profitOuts(q){
   o.mulabel=`With ${num(F.markup)}% markup`; o.mu=t.markupPrice==null?`<span class="warnc">${esc(t.markupError)}</span>`:peso(withVat(t.markupPrice),2);
   o.mglabel=`For a ${num(F.margin)}% margin`; o.mg=t.marginPrice==null?`<span class="warnc">${esc(t.marginError)}</span>`:peso(withVat(t.marginPrice),2);
   for(const it of q.est.items){ o['i:'+it.key]=peso(it.amount,2); o['c:'+it.key]=itemCalc(it,q); }
-  o.shifts=String(q.est.shifts); o.shiftc=S.shifts?'set by you':`auto: ~${hm(q.hours)} ÷ ${num(F.shiftHours)} h shifts`;
+  o.shifts=String(q.est.shifts); o.shiftc=q.est.shiftBasis==='override'?'set by you':q.est.shiftBasis==='km'?`by distance: ${num(q.driven,1)} km ÷ ${num(F.kmPerDay)} km per day`:`auto: ~${hm(q.hours)} ÷ ${num(F.shiftHours)} h shifts`;
   o.cash=peso(q.est.cash,2); o.alloc=peso(q.est.alloc,2); o.cost=peso(q.est.total,2);
   o.rev=peso(q.netRev,2); o.rpk=q.pl.revPerKm==null?'—':peso(q.pl.revPerKm,2); o.cpk=q.pl.costPerKm==null?'—':peso(q.pl.costPerKm,2); o.km=num(q.driven,1)+' km';
   o.problems=q.est.problems.map(esc).join('<br>');
@@ -716,6 +716,7 @@ function renderProfit(){
     <div class="group">
       ${cash.map(row).join('')}
       <div class="r"><span class="n">Crew shifts<span class="calc" data-po="shiftc"></span></span><div class="step"><button data-sh="-1" aria-label="Fewer shifts">−</button><b data-po="shifts"></b><button data-sh="1" aria-label="More shifts">+</button></div>${S.shifts?'<button class="use" data-sh="auto">Auto</button>':''}</div>
+      <div class="r"><span class="n">Count crew days by distance<span class="calc">${+F.crewByKm?`on · 1 day per ${num(F.kmPerDay)} km driven`:'off · days come from job hours'}</span></span><button class="sw sm" data-crewkm aria-pressed="${!!+F.crewByKm}" aria-label="Count crew days by distance"></button></div>
       <div class="r sum"><span class="n">Cash paid on the trip</span><span class="v" data-po="cash"></span></div>
       ${alloc.map(row).join('')}
       ${alloc.length?'<div class="r sum"><span class="n">Set aside<span class="calc">counted in the cost, not paid on the day</span></span><span class="v" data-po="alloc"></span></div>':''}
@@ -741,8 +742,9 @@ $('#profitBody').addEventListener('input',e=>{
   render();
 });
 $('#profitBody').addEventListener('click',e=>{
-  const u=e.target.closest('[data-use]'), sh=e.target.closest('[data-sh]'), sw=e.target.closest('[data-off]');
-  if(sw){ const k=sw.dataset.off; if(R.costOff[k]) delete R.costOff[k]; else R.costOff[k]=true; saveRates(); }
+  const u=e.target.closest('[data-use]'), sh=e.target.closest('[data-sh]'), sw=e.target.closest('[data-off]'), ck=e.target.closest('[data-crewkm]');
+  if(ck){ R.fees.crewByKm=+R.fees.crewByKm?0:1; saveRates(); }
+  else if(sw){ const k=sw.dataset.off; if(R.costOff[k]) delete R.costOff[k]; else R.costOff[k]=true; saveRates(); }
   else if(u){ const q=quote(), k=u.dataset.use;
     const val=k==='rate'?'':k==='mu'?withVat(q.targets.markupPrice):withVat(q.targets.marginPrice);
     if(val===null) return; S.price=val===''?'':String(Math.ceil(val)); }
@@ -761,10 +763,17 @@ function factorGroup(){
     return `<div class="r ${off?'offrow':''}"><span class="n">${esc(x.name)}<span class="calc">${off?'off · not counted in the cost':esc(x.sub)}</span></span><button class="sw sm" data-offr="${esc(x.key)}" aria-pressed="${!off}" aria-label="Include ${esc(x.name)}"></button></div>`; }).join('')}</div>
     <div class="gnote">Switched-off costs are left out of the cost, break-even, price targets and profit for new quotes. Saved jobs keep what they were quoted with. The same switches are on the Cost &amp; profit screen.</div>`;
 }
+/* Optional rule: crew days by distance. Off = days come from job hours (the original way). */
+function crewDayGroup(){ const on=!!+R.fees.crewByKm;
+  return `<div class="glabel">Crew days by distance</div><div class="group">
+    <div class="r"><span class="n">Count crew days by distance<span class="calc">${on?'on':'off · days come from job hours ÷ shift length'}</span></span><button class="sw sm" data-crewkm aria-pressed="${on}" aria-label="Count crew days by distance"></button></div>
+    <div class="r"><span class="n">Km per crew day<span class="calc">up to this many km driven = 1 day</span></span><input class="ed s" inputmode="decimal" id="fee-kmPerDay" data-fee="kmPerDay" value="${esc(R.fees.kmPerDay)}"><span class="s">km</span></div></div>
+    <div class="gnote">When on, each block of km driven pays one more day for every crew member: with 180 km, 180 km = 1 day, 181–360 km = 2 days, 422.5 km = 3 days. A number of days typed on the Cost &amp; profit screen still wins.</div>`; }
 function renderRates(){
   let html='';
   for(const [lk,L] of Object.entries(LISTS)){
     if(lk==='crew') html+=factorGroup();
+    if(lk==='costLines') html+=crewDayGroup();
     const items=R[lk].map((it,i)=>`<div class="item"><div class="item-h"><b>${esc(itemTitle(lk,it))}</b><button class="x" data-del="${lk}:${i}">Remove</button></div>
       <div class="fgrid">${L.fields.map(([k,lab,ty,span,opts])=>`<label class="${span||''}">${lab}${ty==='sel'
         ?`<select id="f-${lk}-${i}-${k}" data-f="${lk}:${i}:${k}">${opts.map(([v,t])=>`<option value="${v}" ${it[k]===v?'selected':''}>${t}</option>`).join('')}</select>`
@@ -804,7 +813,8 @@ $('#ratesBody').addEventListener('input',onRatesInput);
 $('#ratesBody').addEventListener('change',e=>{ if(e.target.tagName==='SELECT') onRatesInput(e); });
 let delArm=null;
 $('#ratesBody').addEventListener('click',e=>{
-  const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]'), fo=e.target.closest('[data-offr]');
+  const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]'), fo=e.target.closest('[data-offr]'), ck=e.target.closest('[data-crewkm]');
+  if(ck){ R.fees.crewByKm=+R.fees.crewByKm?0:1; saveRates(); const y=$('#ratesBody').scrollTop; renderRates(); $('#ratesBody').scrollTop=y; render(); return; }
   if(fo){ const k=fo.dataset.offr; if(R.costOff[k]) delete R.costOff[k]; else R.costOff[k]=true; saveRates(); const y=$('#ratesBody').scrollTop; renderRates(); $('#ratesBody').scrollTop=y; render(); return; }
   if(d){ if(delArm!==d.dataset.del){ delArm=d.dataset.del; d.textContent='Tap to confirm'; setTimeout(()=>{ if(delArm===d.dataset.del){ delArm=null; if(d.isConnected) d.textContent='Remove'; } },2500); return; }
     delArm=null; const [lk,i]=d.dataset.del.split(':'); R[lk].splice(+i,1); saveRates(true); renderRates(); render(); return; }
@@ -847,9 +857,9 @@ $('#bookBody').addEventListener('click',async e=>{
     kmOut:q.out,kmTowed:r2(q.loaded),kmBack:q.back,kmDriven:r2(q.driven),stops:S.stops.length,litres:r2(q.litres),
     tow:r2(q.run),fuel:r2(q.fuel),fees:r2(q.fees),discount:q.d?q.d.name:'',total:r2(q.total),status,
     rateCard:r2(q.rateCard),priceManual:q.manual,vat:!!S.vat,netRevenue:r2(q.netRev),
-    est:{items:q.est.items.map(i=>({key:i.key,name:i.name,kind:i.kind,amount:r2(i.amount),...(i.off?{off:true}:{})})),cash:r2(q.est.cash),alloc:r2(q.est.alloc),total:r2(q.est.total),litres:r2(q.est.litres),shifts:q.est.shifts,hours:r2(q.hours)},
+    est:{items:q.est.items.map(i=>({key:i.key,name:i.name,kind:i.kind,amount:r2(i.amount),...(i.off?{off:true}:{})})),cash:r2(q.est.cash),alloc:r2(q.est.alloc),total:r2(q.est.total),litres:r2(q.est.litres),shifts:q.est.shifts,shiftBasis:q.est.shiftBasis,hours:r2(q.hours)},
     estProfit:r2(q.pl.profit),estMargin:q.pl.marginPct==null?null:r2(q.pl.marginPct),
-    assump:{diesel:q.diesel,kmpl:q.kmpl,baseFee:q.baseFee,lkm:q.lkm,ekm:q.ekm,incl:q.incl,mult:q.mult,vatPct:+F.vat||0,markup:+F.markup||0,margin:+F.margin||0,shiftHours:+F.shiftHours||8,
+    assump:{diesel:q.diesel,kmpl:q.kmpl,baseFee:q.baseFee,lkm:q.lkm,ekm:q.ekm,incl:q.incl,mult:q.mult,vatPct:+F.vat||0,markup:+F.markup||0,margin:+F.margin||0,shiftHours:+F.shiftHours||8,crewByKm:!!+F.crewByKm,kmPerDay:+F.kmPerDay||0,
       crew:clone(R.crew),costLines:clone(R.costLines),tolls:q.tolls,legs:{out:S.out,tow:S.tow,back:S.back,stops:clone(S.stops),ret:!!S.ret}},
     actual:{amounts:{},collected:''}};
   if(!(await putJob(rec))){ $('#bookBody').querySelectorAll('[data-book]').forEach(b=>b.disabled=false); return; }
@@ -881,7 +891,7 @@ function renderJobs(){
   const detail=b=>{
     const A=b.assump, est=b.est;
     const head=`<div style="padding:0 16px 10px;line-height:1.5" class="calc">${esc(b.vehicle)} · ${esc(b.condition)}${b.plate?' · '+esc(b.plate):''}<br>${b.pickup||b.dropoff?esc(b.homeBase?b.homeBase+' → ':'')+esc(b.pickup||'?')+' → '+esc(b.dropoff||'?')+'<br>':''}${num(b.kmDriven,1)} km driven (${num(b.kmOut,1)} + ${num(b.kmTowed,1)} + ${num(b.kmBack,1)})${b.phone?' · '+esc(b.phone):''}<br>`+
-      (est?`Quoted ${peso(b.total)}${b.priceManual?` (rate card ${peso(b.rateCard)})`:''} · est. cost ${peso(est.total)} · <span class="${b.estProfit<0?'bad':'good'}">est. profit ${peso(b.estProfit)} (${pct(b.estMargin)})</span><br>Diesel ${peso(A.diesel,2)}/L at ${num(A.kmpl)} km/L = ${num(est.litres,1)} L · ${est.shifts} crew shift${est.shifts>1?'s':''}${est.items.some(i=>i.off)?'<br>Left out of the cost: '+est.items.filter(i=>i.off).map(i=>esc(i.name)).join(', '):''}`
+      (est?`Quoted ${peso(b.total)}${b.priceManual?` (rate card ${peso(b.rateCard)})`:''} · est. cost ${peso(est.total)} · <span class="${b.estProfit<0?'bad':'good'}">est. profit ${peso(b.estProfit)} (${pct(b.estMargin)})</span><br>Diesel ${peso(A.diesel,2)}/L at ${num(A.kmpl)} km/L = ${num(est.litres,1)} L · ${est.shifts} crew ${est.shiftBasis==='km'?`day${est.shifts>1?'s':''} (by distance, ${num(A.kmPerDay)} km per day)`:`shift${est.shifts>1?'s':''}`}${est.items.some(i=>i.off)?'<br>Left out of the cost: '+est.items.filter(i=>i.off).map(i=>esc(i.name)).join(', '):''}`
           :`Quoted ${peso(b.total)} · saved before costs were tracked, so there’s no estimate`)+`</div>`;
     const segs=`<div class="segs" style="padding-top:0">${['Quoted','Dispatched','Completed','Cancelled'].map(s=>`<button class="seg ${b.status===s?'on':''}" data-status="${s}" data-for="${esc(b.ref)}">${s==='Dispatched'?'Dispatch':s==='Completed'?'Done':s==='Cancelled'?'Cancel':'Quote'}</button>`).join('')}<button class="seg del ${delSure===b.ref?'sure':''}" data-deljob="${esc(b.ref)}">${delSure===b.ref?'Delete?':'Delete'}</button></div>`;
     if(b.status!=='Dispatched'&&b.status!=='Completed') return head+segs;

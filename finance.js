@@ -16,6 +16,22 @@
     return Math.max(1, Math.ceil(pos(hours) / sh - 1e-9));
   }
 
+  /* Optional rule (off unless switched on): one crew day per kmPerDay km driven, rounded up, at least 1.
+     e.g. 180 km per day: 180 km = 1 day, 181 km = 2 days, 422.5 km = 3 days. */
+  function crewDaysByKm(kmDriven, kmPerDay) {
+    const per = n(kmPerDay);
+    if (!(per > 0)) return null;
+    return Math.max(1, Math.ceil(pos(kmDriven) / per - 1e-9));
+  }
+
+  /* Which rule sets the crew shifts/days: a typed number wins, then distance (if switched on), then hours. */
+  function crewPlan(p) {
+    const o = Math.floor(n(p.shifts));
+    if (o >= 1) return { shifts: o, basis: 'override' };
+    if (p.crewByKm) { const d = crewDaysByKm(p.kmDriven, p.kmPerDay); if (d !== null) return { shifts: d, basis: 'km' }; }
+    return { shifts: crewShifts(p.hours, p.shiftHours), basis: 'hours' };
+  }
+
   /* Estimated operating cost of one job.
      kmDriven  every km the truck drives (to pickup + towed + return), whether or not the customer pays for it
      crew      [{role, basic, meal}] per shift. Meals live here, so no separate meal line is needed.
@@ -27,7 +43,7 @@
     const problems = [];
     if (km > 0 && !(kmpl > 0)) problems.push('Fuel economy must be more than 0 km per litre');
     const litres = kmpl > 0 ? km / kmpl : 0;
-    const shifts = crewShifts(p.hours, p.shiftHours, p.shifts);
+    const plan = crewPlan(p), shifts = plan.shifts;
     const items = [];
     items.push({ key: 'fuel', name: 'Diesel', kind: 'cash', amount: litres * diesel, detail: { km, kmpl, litres, diesel } });
     items.push({ key: 'tolls', name: 'Tolls & parking', kind: 'cash', amount: tolls });
@@ -49,7 +65,7 @@
     const on = items.filter(i => !i.off);
     const cash = on.filter(i => i.kind === 'cash').reduce((a, i) => a + i.amount, 0);
     const alloc = on.filter(i => i.kind === 'alloc').reduce((a, i) => a + i.amount, 0);
-    return { items, kmDriven: km, litres, shifts, cash, alloc, total: cash + alloc, problems };
+    return { items, kmDriven: km, litres, shifts, shiftBasis: plan.basis, cash, alloc, total: cash + alloc, problems };
   }
 
   /* Price the customer pays, without VAT. VAT is collected for the government, not revenue. */
@@ -113,7 +129,7 @@
     };
   }
 
-  const api = { crewShifts, estimateCost, netRevenue, priceTargets, evaluate, actualResult };
+  const api = { crewShifts, crewDaysByKm, crewPlan, estimateCost, netRevenue, priceTargets, evaluate, actualResult };
   root.GTFinance = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

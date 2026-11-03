@@ -154,6 +154,16 @@ The cost is what the job costs **GT Auto**, separate from what the customer pays
 
 Meals are part of crew pay. Don't add them again as a separate trip cost, or they'll be counted twice.
 
+**Optional: crew days by distance** (off unless you switch it on)
+
+Switch **Count crew days by distance** on in **Fleet & rates → Crew days by distance**, or on the Cost & profit screen. Days are then counted from **km driven** instead of hours:
+
+- Days = km driven ÷ **km per crew day** (default **180 km**), **rounded up**, at least 1.
+- 180 km or less = 1 day · 181–360 km = 2 days · 361–540 km = 3 days.
+- The reference trip (422.5 km) becomes **3 days**: driver ₱2,400, helper ₱1,950.
+- A number of days you type with **− / +** still wins.
+- Switch it off to go back to counting by hours. Saved jobs keep the rule they were quoted with; a job shows e.g. *"3 crew days (by distance, 180 km per day)"*.
+
 **Cash vs set aside**
 - **Cash**: money that leaves on the trip (diesel, tolls, crew, other expenses).
 - **Set aside**: money you reserve from each job for later: **maintenance reserve**, **tire reserve**, **depreciation**. It counts in the cost and profit, but it isn't paid out on the day.
@@ -285,6 +295,7 @@ Next time, tap the route under **Saved routes** to fill in its distances, extra 
 | **Tow units** | Code, code name, type, capacity (tons), hook-up ₱, free km, towed ₱/km, empty ₱/km, km per litre |
 | **Cost factors to include** | On/off switch for every cost ([section 6](#6-turning-cost-factors-on-or-off)) |
 | **Crew pay per shift** | Role, basic ₱, meal ₱ (per shift). Add or remove crew roles. |
+| **Crew days by distance** | On/off switch and km per crew day (default 180). Off = days from job hours. |
 | **Trip costs** | Name, amount ₱, per trip or per km, cash or set aside |
 | **Vehicle classes** | Weight (tons) for the capacity check; rate × multiplier |
 | **Vehicle condition** | Fee ₱; suitable unit types (decides Best fit) |
@@ -301,6 +312,7 @@ Next time, tap the route under **Saved routes** to fill in its distances, extra 
 | Driver | ₱650 basic + ₱150 meal | given by GT Auto |
 | Helper | ₱500 basic + ₱150 meal | given by GT Auto |
 | Shift length | 8 hours | |
+| Crew days by distance | off, 180 km per day | switch on when you want it |
 | Markup / target margin | 25% / 20% | change to your targets |
 | Maintenance, tire, depreciation, other | ₱0 | **fill in your own** |
 | Tow unit rates, condition fees, surcharges, discounts | samples | **replace with real rates** |
@@ -359,6 +371,8 @@ Diesel ₱98/L, truck does 4.5 km/L, customer price ₱27,900, no tolls entered,
 
 With **Helper switched off**, the cost is ₱10,801.11 and the profit ₱17,098.89.
 
+With **crew days by distance** on (180 km per day): 3 days, crew ₱4,350, cost ₱13,551.11, profit ₱14,348.89.
+
 The profit will be lower once tolls and maintenance, tire and depreciation amounts are added.
 
 ---
@@ -369,11 +383,11 @@ The profit will be lower once tolls and maintenance, tire and depreciation amoun
 |---|---|
 | `index.html` | All screens and the rate card price |
 | `finance.js` | Every cost and profit formula, as plain functions with no screen code |
-| `sw.js` | Offline support; the cache name (`gt-towing-v4`) must go up with every update |
+| `sw.js` | Offline support; the cache name (`gt-towing-v5`) must go up with every update |
 | `manifest.webmanifest` | App name, colours and icons |
 | `icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon.png` | Official GT logo icons; keep them in the main folder |
 
 - **Branches:** `main` is the original app; `v3` is this version. GitHub Pages serves whichever branch is chosen in **Settings → Pages**.
-- **Updating:** change the files, raise the number in `sw.js` (`gt-towing-v4` → `gt-towing-v5`), then commit. Phones pick up the new version the next time they open the app with internet.
+- **Updating:** change the files, raise the number in `sw.js` (`gt-towing-v5` → `gt-towing-v6`), then commit. Phones pick up the new version the next time they open the app with internet.
 - **Saved data on the phone** uses the keys `gtt.rates`, `gtt.jobs`, `gtt.draft`, `gtt.device` and `gtt.lastBackup`. New versions must only **add** to these, never reset them, so nobody loses jobs.
 - **Same website, same data:** every copy of the app under `kuwarts.github.io` shares the same saved data on a phone. An older copy that saves settings drops newer settings (crew pay, cost switches, routes). Back up before testing another copy.
