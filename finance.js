@@ -59,13 +59,31 @@
       const amount = basis === 'km' ? pos(l.amt) * km : pos(l.amt);
       items.push({ key: 'line:' + l.name, name: l.name, kind, amount, detail: { rate: pos(l.amt), basis } });
     }
-    /* Cost factors switched off by the owner stay listed (so they can be switched back on) but count for nothing. */
+    /* Sea crossings (inter-island jobs only). One-way fares per crossing; crew fares for every crew member switched on. */
     const off = p.off || {};
+    if ((p.crossings || []).length) {
+      const crewOn = (p.crew || []).filter(c => c && String(c.role || '').trim() && !off['crew:' + c.role]).length;
+      const f = ferryCosts(p.crossings, crewOn), d = { crossings: p.crossings.length, crewOn, routes: f.routes };
+      items.push({ key: 'ferry:truck', name: 'RoRo fare (truck)', kind: 'cash', amount: f.truck, detail: d });
+      items.push({ key: 'ferry:crew', name: 'Crew ferry fares', kind: 'cash', amount: f.pax, detail: d });
+      items.push({ key: 'ferry:port', name: 'Port & terminal fees', kind: 'cash', amount: f.port, detail: d });
+    }
+    /* Cost factors switched off by the owner stay listed (so they can be switched back on) but count for nothing. */
     for (const i of items) i.off = !!off[i.key];
     const on = items.filter(i => !i.off);
     const cash = on.filter(i => i.kind === 'cash').reduce((a, i) => a + i.amount, 0);
     const alloc = on.filter(i => i.kind === 'alloc').reduce((a, i) => a + i.amount, 0);
     return { items, kmDriven: km, litres, shifts, shiftBasis: plan.basis, cash, alloc, total: cash + alloc, problems };
+  }
+
+  /* Ferry money for a list of crossings: [{route:{name, truck, pax, port, hrs}}]. Crossings with no route count ₱0. */
+  function ferryCosts(crossings, crewCount) {
+    let truck = 0, pax = 0, port = 0, hours = 0; const routes = [];
+    for (const c of (crossings || [])) {
+      const r = (c && c.route) || null; if (!r) continue;
+      truck += pos(r.truck); pax += pos(r.pax) * pos(crewCount); port += pos(r.port); hours += pos(r.hrs); routes.push(r.name);
+    }
+    return { truck, pax, port, hours, total: truck + pax + port, routes };
   }
 
   /* Price the customer pays, without VAT. VAT is collected for the government, not revenue. */
@@ -129,7 +147,7 @@
     };
   }
 
-  const api = { crewShifts, crewDaysByKm, crewPlan, estimateCost, netRevenue, priceTargets, evaluate, actualResult };
+  const api = { crewShifts, crewDaysByKm, crewPlan, ferryCosts, estimateCost, netRevenue, priceTargets, evaluate, actualResult };
   root.GTFinance = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -23,6 +23,7 @@ It works like a calculator: you type the distances on the keypad and the price u
 11. [Fleet & rates: every setting explained](#11-fleet--rates-every-setting-explained)
 12. [Your data, backups and new phones](#12-your-data-backups-and-new-phones)
 13. [Worked example: Daraga → Goa → Daet](#13-worked-example-daraga--goa--daet)
+15. [Inter-island tows](#15-inter-island-tows)
 14. [For whoever maintains the app](#14-for-whoever-maintains-the-app)
 
 ---
@@ -383,11 +384,69 @@ The profit will be lower once tolls and maintenance, tire and depreciation amoun
 |---|---|
 | `index.html` | All screens and the rate card price |
 | `finance.js` | Every cost and profit formula, as plain functions with no screen code |
-| `sw.js` | Offline support; the cache name (`gt-towing-v5`) must go up with every update |
+| `islands.js` | Place name → island, and sea crossings between legs |
+| `sw.js` | Offline support; the cache name (`gt-towing-v6`) must go up with every update |
 | `manifest.webmanifest` | App name, colours and icons |
 | `icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon.png` | Official GT logo icons; keep them in the main folder |
 
 - **Branches:** `main` is the original app; `v3` is this version. GitHub Pages serves whichever branch is chosen in **Settings → Pages**.
-- **Updating:** change the files, raise the number in `sw.js` (`gt-towing-v5` → `gt-towing-v6`), then commit. Phones pick up the new version the next time they open the app with internet.
+- **Updating:** change the files, raise the number in `sw.js` (`gt-towing-v6` → `gt-towing-v7`), then commit. Phones pick up the new version the next time they open the app with internet.
 - **Saved data on the phone** uses the keys `gtt.rates`, `gtt.jobs`, `gtt.draft`, `gtt.device` and `gtt.lastBackup`. New versions must only **add** to these, never reset them, so nobody loses jobs.
 - **Same website, same data:** every copy of the app under `kuwarts.github.io` shares the same saved data on a phone. An older copy that saves settings drops newer settings (crew pay, cost switches, routes). Back up before testing another copy.
+
+---
+
+## 15. Inter-island tows
+
+The app spots when a job crosses the sea (e.g. a pickup in Samar, Masbate or Catanduanes) and adds the ferry costs.
+
+**How it detects it**
+- It reads the **home base** (Fleet & rates), **pickup**, **drop-off** and extra-stop names typed in the Breakdown, and works out the island of each.
+- Each leg that changes island is one **sea crossing**: home base → pickup, pickup → drop-off, drop-off → home base.
+- Islands joined by bridges count as one: **Samar, Leyte and Biliran** are one group.
+- **Type the province to be safe**, e.g. *"Catarman, Northern Samar"*. Names used on several islands (Naga, Pilar, San Isidro, San Andres…) aren't guessed. If a place isn't recognised, the Breakdown says so.
+- **Enter road km only** for the distances. The sea part isn't driven.
+
+**Auto / On / Off (per job, in the Breakdown under ⛴ Inter-island)**
+
+| Setting | What happens |
+|---|---|
+| **Auto** (default) | Uses what it detects from the place names. |
+| **On** | You choose the ferry route and the number of crossings (there and back = 2). |
+| **Off** | No ferry costs for this job, even if it detects a crossing. |
+
+When it's inter-island, the main screen shows **⛴ 2 crossings** next to the km.
+
+**What it adds**
+
+| | Your cost | Customer price |
+|---|---|---|
+| **RoRo fare (truck)** | truck fare × crossings | at cost, if *Charge ferry costs to the customer* is on |
+| **Crew ferry fares** | per-person fare × crew switched on × crossings | at cost (same switch) |
+| **Port & terminal fees** | port fees × crossings | at cost (same switch) |
+| **Inter-island surcharge** | — | % of the service price + fixed ₱ fee |
+| **Crossing hours** | added to the job time, so they count toward crew shifts | — |
+
+The three ferry costs have their own on/off switches like every other cost. You record their actual amounts after the job like any other cost.
+
+**Ferry routes (Fleet & rates → Ferry routes)**
+
+The app starts with five Bicol routes, **all at ₱0**. Enter your own fares (one way, per crossing):
+
+| Route | Islands |
+|---|---|
+| Matnog – Allen | Luzon ↔ Samar–Leyte |
+| Matnog – San Isidro | Luzon ↔ Samar–Leyte |
+| Pilar – Masbate City | Luzon ↔ Masbate |
+| Tabaco – San Andres | Luzon ↔ Catanduanes |
+| Tabaco – Virac | Luzon ↔ Catanduanes |
+
+- Add more routes with **＋ Add ferry route** (pick Island A and Island B).
+- When two routes serve the same islands, the first one is used. Pick the other one per job in the Breakdown.
+- If fares are still ₱0, or no route serves a crossing, the main screen shows a warning.
+
+**Settings (Fleet & rates → Inter-island jobs)**
+- **Charge ferry costs to the customer** (on to start): adds truck fare, crew fares and port fees to the price at cost.
+- **Inter-island surcharge** (%) and **Inter-island fee** (₱): start at 0.
+
+Saved jobs keep the routes and fares they were quoted with, e.g. *"⛴ Inter-island: 2 sea crossings (Matnog – Allen)"*.

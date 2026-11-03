@@ -269,6 +269,7 @@ button.r:active{background:var(--row-hi)}
 <div class="toast" id="toast"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
+<script src="islands.js"></script>
 <script src="finance.js"></script>
 <script>
 (() => {
@@ -303,9 +304,13 @@ const DEFAULT_RATES = {
   /* Starts at ₱0: the owner fills these in. Nothing is guessed. */
   costLines:[{name:'Other trip expenses',amt:0,basis:'trip',kind:'cash'},{name:'Maintenance reserve',amt:0,basis:'km',kind:'alloc'},{name:'Tire reserve',amt:0,basis:'km',kind:'alloc'},{name:'Depreciation',amt:0,basis:'km',kind:'alloc'}],
   routes:[],
+  /* Ferry/RoRo routes. Fares start at ₱0: GT Auto enters its own (one-way, per crossing). */
+  ferries:[{name:'Matnog – Allen',a:'Luzon',b:'Samar–Leyte',truck:0,pax:0,port:0,hrs:0},{name:'Matnog – San Isidro',a:'Luzon',b:'Samar–Leyte',truck:0,pax:0,port:0,hrs:0},
+    {name:'Pilar – Masbate City',a:'Luzon',b:'Masbate',truck:0,pax:0,port:0,hrs:0},{name:'Tabaco – San Andres',a:'Luzon',b:'Catanduanes',truck:0,pax:0,port:0,hrs:0},
+    {name:'Tabaco – Virac',a:'Luzon',b:'Catanduanes',truck:0,pax:0,port:0,hrs:0}],
   /* Cost factors switched off, by key (e.g. 'tolls', 'crew:Helper'). Empty = every cost counts. */
   costOff:{},
-  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12,homeBase:'',shiftHours:8,markup:25,margin:20,crewByKm:0,kmPerDay:180}
+  fees:{diesel:62,night:20,nightFrom:22,nightTo:6,holiday:25,minCharge:2500,freeWait:30,waitRate:300,avgSpeed:35,vat:12,homeBase:'',shiftHours:8,markup:25,margin:20,crewByKm:0,kmPerDay:180,ferryBill:1,islandPct:0,islandFee:0}
 };
 const LISTS = {
   units:{label:'Tow units',add:'Add tow unit',sel:'unit',key:'code',blank:{code:'',name:'',type:'Flatbed',cap:0,base:0,lkm:0,ekm:0,incl:0,kmpl:0},
@@ -323,7 +328,10 @@ const LISTS = {
     fields:[['name','Condition','t','full'],['fee','Fee ₱','n'],['rec','Suitable unit types','t','wide']],note:'Suitable types drive the Best fit and Recommended badges.'},
   weather:{label:'Weather surcharge',add:'Add weather',sel:'weather',key:'name',blank:{name:'',pct:0},fields:[['name','Weather','t','wide'],['pct','Surcharge %','n']]},
   extras:{label:'Equipment & extras',add:'Add extra',key:'name',blank:{name:'',price:0},fields:[['name','Item','t','wide'],['price','Price ₱','n']]},
-  discounts:{label:'Discounts',add:'Add discount',sel:'disc',key:'name',blank:{name:'',pct:0},fields:[['name','Discount','t','wide'],['pct','Off %','n']]}
+  discounts:{label:'Discounts',add:'Add discount',sel:'disc',key:'name',blank:{name:'',pct:0},fields:[['name','Discount','t','wide'],['pct','Off %','n']]},
+  ferries:{label:'Ferry routes (inter-island)',add:'Add ferry route',key:'name',blank:{name:'',a:'Luzon',b:'Samar–Leyte',truck:0,pax:0,port:0,hrs:0},
+    fields:[['name','Route','t','full'],['a','Island A','sel','',GTIslands.GROUPS.map(g=>[g,g])],['b','Island B','sel','',GTIslands.GROUPS.map(g=>[g,g])],['truck','Truck fare ₱','n'],['pax','Per person ₱','n'],['port','Port fees ₱','n'],['hrs','Crossing hours','n']],
+    note:'One-way, per crossing. Truck fare = the tow truck with the vehicle on it. Per person = each crew member switched on. Crossing hours are added to the job time (and crew shifts). The app picks the route by the islands it detects; if two routes serve the same islands, choose one per job in the Breakdown.'}
 };
 const FEES = [['homeBase','Home base','where trips start and end','t'],['markup','Markup','% added on top of cost'],['margin','Target margin','% of the price kept as profit'],['shiftHours','Crew shift length','hours per shift'],['diesel','Diesel price','₱ per litre'],['night','Night differential','% added'],['nightFrom','Night starts','hour, 24h'],['nightTo','Night ends','hour, 24h'],['holiday','Sunday / holiday','% added'],['minCharge','Minimum charge','₱ per job'],['freeWait','Free waiting','minutes'],['waitRate','Waiting rate','₱ per hour'],['avgSpeed','Average speed','km/h, for time estimate'],['vat','VAT','%']];
 
@@ -332,9 +340,9 @@ function normRates(r){ const d=clone(DEFAULT_RATES); r=r||{}; for(const k of [..
 let R = normRates(LS.get('gtt.rates', null));
 let jobs = LS.get('gtt.jobs', []);
 const DRAFT0 = {unit:'GT-FB1',vclass:'Car / sedan',cond:"Won't start / no power",weather:'Clear',night:'auto',holiday:false,
-  out:'8',tow:'22',back:'26',active:'tow',ret:true,stops:[],extras:{},wait:'',tolls:'',disc:'',adj:'',vat:false,ov:{},price:'',shifts:'',pickup:'',dropoff:''};
+  out:'8',tow:'22',back:'26',active:'tow',ret:true,stops:[],extras:{},wait:'',tolls:'',disc:'',adj:'',vat:false,ov:{},price:'',shifts:'',pickup:'',dropoff:'',island:'auto',ferryPick:{},ferryManual:'',crossings:'2'};
 const FIN = window.GTFinance;
-const clearJob = () => { FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.price=''; S.shifts=''; S.pickup=''; S.dropoff=''; S.active='out'; };
+const clearJob = () => { FIELDS.forEach(x=>S[x]=''); S.stops=[]; S.extras={}; S.wait=''; S.tolls=''; S.adj=''; S.disc=''; S.ov={}; S.price=''; S.shifts=''; S.pickup=''; S.dropoff=''; S.island='auto'; S.ferryPick={}; S.ferryManual=''; S.crossings='2'; S.active='out'; };
 const S = Object.assign(clone(DRAFT0), LS.get('gtt.draft', {}));
 S.ov=S.ov||{}; S.stops=S.stops||[]; S.extras=S.extras||{};
 const FIELDS=['out','tow','back'], FLABEL={out:'To pickup',tow:'Towed',back:'Return'};
@@ -369,6 +377,19 @@ function bestUnit(){ const c=cond(),v=vcls(); return R.units.filter(u=>u.code&&f
 function isNightHour(h){ const f=+R.fees.nightFrom, t=+R.fees.nightTo; return f>t ? (h>=f||h<t) : (h>=f&&h<t); }
 const nightOn=()=>S.night==='on'||(S.night==='auto'&&isNightHour(new Date().getHours()));
 
+/* Inter-island: Auto reads the home base, pickup, drop-off and extra-stop names; On = manual route and crossings; Off = none. */
+const crewOnCount=()=>R.crew.filter(c=>String(c.role||'').trim()&&!R.costOff['crew:'+c.role]).length;
+function islandPlan(){
+  const H=R.fees.homeBase||'';
+  const pts=[{label:'Home base',text:H},{label:'Pickup',text:S.pickup},{label:'Drop-off',text:S.dropoff},
+    ...(S.stops||[]).map((st,i)=>({label:st.label||`Stop ${i+2}`,text:st.label})),{label:'Home base',text:H}];
+  const plan=GTIslands.planCrossings(pts,R.ferries,S.ferryPick), mode=S.island||'auto';
+  let crossings=[];
+  if(mode==='on'){ const r=R.ferries.find(x=>x.name===S.ferryManual)||R.ferries.find(x=>x.name)||null; const n=Math.max(1,Math.floor(ev(S.crossings))||1);
+    crossings=Array.from({length:n},(_,i)=>({leg:`crossing ${i+1}`,from:r?r.a:'',to:r?r.b:'',key:r?GTIslands.pairKey(r.a,r.b):'',route:r,options:[]})); }
+  else if(mode==='auto') crossings=plan.crossings;
+  return {mode,plan,crossings,inter:crossings.length>0,detected:plan.inter};
+}
 function quote(){
   const u=unit(), v=vcls(), c=cond(), w=wthr(), F=R.fees, d=disc();
   const out=Math.max(0,ev(S.out)), tow=Math.max(0,ev(S.tow)), back=Math.max(0,ev(S.back));
@@ -384,24 +405,27 @@ function quote(){
   const sub=hook+towed+deadhead+fuel+condFee+extras+waiting;
   const night=nightOn(), nPct=night?+F.night||0:0, wPct=+w.pct||0, hPct=S.holiday?+F.holiday||0:0;
   const surcharge=sub*(nPct+wPct+hPct)/100;
-  const dPct=d?+d.pct||0:0, discount=(sub+surcharge)*dPct/100;
+  const isl=islandPlan(), fc=FIN.ferryCosts(isl.crossings,crewOnCount());
+  /* Inter-island: surcharge on the service, plus ferry costs passed to the customer at cost (if switched on). */
+  const islandSur=isl.inter?sub*(+F.islandPct||0)/100+(+F.islandFee||0):0, ferryBill=isl.inter&&+F.ferryBill?fc.total:0;
+  const dPct=d?+d.pct||0:0, discount=(sub+surcharge+islandSur)*dPct/100;
   const adj=ev(S.adj);
-  let service=sub+surcharge-discount+adj, minUp=0;
+  let service=sub+surcharge+islandSur-discount+adj, minUp=0;
   if(loaded>0 && service<(+F.minCharge||0)){ minUp=(+F.minCharge)-service; service=+F.minCharge; }
-  const tolls=Math.max(0,ev(S.tolls)), net=service+tolls, vat=S.vat?net*(+F.vat||0)/100:0;
-  const hours=(+F.avgSpeed?driven/(+F.avgSpeed):0)+0.5+waitMin/60;
+  const tolls=Math.max(0,ev(S.tolls)), net=service+tolls+ferryBill, vat=S.vat?net*(+F.vat||0)/100:0;
+  const hours=(+F.avgSpeed?driven/(+F.avgSpeed):0)+0.5+waitMin/60+fc.hours;
   const fit=fitOf(u,c,v), ready=loaded>0&&!!u.code;
   /* Rate-card price: what the rates above add up to. No towed km = no job = ₱0. */
   const rateCard=ready?net+vat:0;
   /* Quoted price: the owner's own figure if typed, otherwise the rate card. */
   const manual=String(S.price||'').trim()!=='', total=manual?Math.max(0,ev(S.price)):rateCard;
   /* Operating cost: fuel on EVERY km driven (the return burns diesel even when it isn't billed), crew per shift, trip costs. */
-  const est=FIN.estimateCost({kmDriven:driven,kmpl,diesel,tolls,hours,shiftHours:F.shiftHours,shifts:S.shifts,crew:R.crew,lines:R.costLines,off:R.costOff,crewByKm:!!+F.crewByKm,kmPerDay:F.kmPerDay});
+  const est=FIN.estimateCost({kmDriven:driven,kmpl,diesel,tolls,hours,shiftHours:F.shiftHours,shifts:S.shifts,crew:R.crew,lines:R.costLines,off:R.costOff,crewByKm:!!+F.crewByKm,kmPerDay:F.kmPerDay,crossings:isl.crossings});
   const netRev=FIN.netRevenue(total,S.vat,F.vat), pl=FIN.evaluate(netRev,est.total,driven), targets=FIN.priceTargets(est.total,F.markup,F.margin);
   const bad=FIELDS.filter(f=>evx(S[f]).bad);
   return {u,v,c,w,d,out,tow,back,stopKm,loaded,empty,driven,charged,mult,baseFee,lkm,ekm,incl,kmpl,diesel,hook,towed,deadhead,litres,fuel,condFee,extras,waitMin,waiting,
-    sub,night,nPct,wPct,hPct,surcharge,dPct,discount,adj,minUp,service,tolls,vat,total,rateCard,manual,hours,fit,est,netRev,pl,targets,bad,
-    run:hook+towed+deadhead, fees:condFee+extras+waiting+surcharge-discount+adj+minUp+tolls+vat, ready};
+    sub,night,nPct,wPct,hPct,surcharge,isl,fc,islandSur,ferryBill,dPct,discount,adj,minUp,service,tolls,vat,total,rateCard,manual,hours,fit,est,netRev,pl,targets,bad,
+    run:hook+towed+deadhead, fees:condFee+extras+waiting+surcharge+islandSur-discount+adj+minUp+tolls+ferryBill+vat, ready};
 }
 const withVat=x=>x==null?null:(S.vat?x*(1+(+R.fees.vat||0)/100):x);
 const pct=(x,d=1)=>x==null?'—':num(x,d)+'%';
@@ -410,6 +434,10 @@ const hm=h=>{ const m=Math.round(h*60); return m<60?`${m} min`:`${Math.floor(m/6
 /* ---------- main render ---------- */
 function fitTotal(){ const el=$('#total'); el.style.fontSize=''; let size=parseFloat(getComputedStyle(el).fontSize); const max=el.parentElement.clientWidth-12; while(el.scrollWidth>max&&size>30){ size-=4; el.style.fontSize=size+'px'; } }
 function envLabel(){ const parts=[S.weather||'Clear']; if(nightOn()) parts.push('Night'); if(S.holiday) parts.push('Holiday'); return parts.join(' · '); }
+function islandWarn(q){ if(!q.isl.inter) return '';
+  if(q.isl.crossings.some(c=>!c.route)) return `No ferry route for ${q.isl.crossings.find(c=>!c.route).key}`;
+  if(q.fc.truck+q.fc.pax+q.fc.port===0) return 'Ferry fares are ₱0';
+  return ''; }
 function render(){
   const q=quote();
   $('#unitName').textContent=q.u.code+(q.u.name?' '+q.u.name:'');
@@ -424,9 +452,10 @@ function render(){
   const nx=FIELDS[(FIELDS.indexOf(S.active)+1)%3];
   $('#nextKey').innerHTML=esc(FLABEL[nx].replace('To pickup','Pickup'))+' ›';
   $('#acKey').textContent=S[S.active]?'C':'AC';
-  const warn=q.bad.length?`Check ${FLABEL[q.bad[0]]}: can’t divide by 0`:!q.fit.capOk?'Over unit capacity':!q.fit.typeOk?'Unit not suited':'';
+  const iw=islandWarn(q);
+  const warn=q.bad.length?`Check ${FLABEL[q.bad[0]]}: can’t divide by 0`:iw?iw:!q.fit.capOk?'Over unit capacity':!q.fit.typeOk?'Unit not suited':'';
   $('#meta').innerHTML=q.loaded>0
-    ? `${warn?`<span class="warn">⚠ ${warn}</span> · `:''}${esc(q.u.type)} · ${num(q.driven,1)} km · ~${hm(q.hours)}`
+    ? `${warn?`<span class="warn">⚠ ${warn}</span> · `:''}${q.isl.inter?`⛴ ${q.isl.crossings.length} crossing${q.isl.crossings.length>1?'s':''} · `:''}${esc(q.u.type)} · ${num(q.driven,1)} km · ~${hm(q.hours)}`
     : (warn?`<span class="warn">⚠ ${warn}</span>`:'Enter the towed distance');
   const edited=Object.keys(S.ov).some(k=>S.ov[k]!=='') || q.adj || q.d;
   $('#split').innerHTML=!q.ready?'Nothing to charge yet':q.manual
@@ -549,9 +578,25 @@ function outs(q){ return {
   disc:peso(-q.discount), discc:q.d?`${esc(q.d.name)} ${num(q.dPct)}%`:'none',
   adj:peso(q.adj), min:peso(q.minUp), tolls:peso(q.tolls), vat:peso(q.vat), total:peso(q.total),
   loadedkm:num(q.loaded,1)+' km', drivenkm:num(q.driven,1)+' km', litres:num(q.litres,1)+' L', time:hm(q.hours),
+  isur:peso(q.islandSur), fbill:peso(q.ferryBill), islc:esc(islandText(q)),
   perkm:q.loaded?peso(q.total/q.loaded,2):'—', perdriven:q.driven?peso(q.total/q.driven,2):'—'
 }; }
 function updateOuts(){ const o=outs(quote()); $('#breakBody').querySelectorAll('[data-out]').forEach(el=>{ const k=el.dataset.out; if(k in o) el.innerHTML=o[k]; }); }
+function islandText(q){ const I=q.isl, P=I.plan;
+  if(I.mode==='off') return P.inter?'off for this job (detected '+P.crossings.length+' sea crossing'+(P.crossings.length>1?'s':'')+')':'off for this job';
+  if(I.mode==='on') return `set by you · ${I.crossings.length} crossing${I.crossings.length>1?'s':''}`;
+  if(I.inter) return 'detected: '+I.crossings.map(c=>`${c.leg} (${c.from} → ${c.to})`).join(', ');
+  const miss=[...P.blank.filter((x,i,a)=>a.indexOf(x)===i).map(x=>x==='Home base'?'home base (Fleet & rates)':x.toLowerCase()),...P.unknown.map(x=>x.toLowerCase()+' place not recognised')];
+  return miss.length?'not detected · fill in '+miss.join(', '):'same island, no sea crossing'; }
+function islandBlock(q){ const I=q.isl, named=R.ferries.filter(r=>r.name);
+  let extra='';
+  if(I.mode==='on') extra=`<div class="r"><span class="n">Ferry route</span><select class="ed sel" style="width:58%" id="fr-manual" data-fmanual>${named.map(r=>`<option ${r.name===(S.ferryManual||named[0]?.name)?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div>
+    <div class="r"><span class="n">Sea crossings<span class="calc">count each way (there and back = 2)</span></span><div class="step"><button data-cx="-1" aria-label="Fewer crossings">−</button><b>${I.crossings.length}</b><button data-cx="1" aria-label="More crossings">+</button></div></div>`;
+  else if(I.mode==='auto'){ const seen=new Set();
+    extra=I.crossings.filter(c=>c.options.length>1&&!seen.has(c.key)&&seen.add(c.key)).map(c=>`<div class="r"><span class="n">Route for ${esc(c.key)}</span><select class="ed sel" style="width:52%" id="fr-${esc(c.key)}" data-fpick="${esc(c.key)}">${c.options.map(o=>`<option ${c.route&&o===c.route.name?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`).join(''); }
+  const w=islandWarn(q);
+  return `<div class="r"><span class="n">⛴ Inter-island<span class="calc" data-out="islc">${esc(islandText(q))}</span>${I.inter?'<span class="calc">Enter road km only; the sea crossings are not driven.</span>':''}${w?`<span class="errline">⚠ ${esc(w)}. Set fares in Fleet &amp; rates → Ferry routes.</span>`:''}</span></div>
+    <div class="segs" style="padding-top:0">${[['auto','Auto'],['on','On'],['off','Off']].map(([m,t])=>`<button class="seg ${I.mode===m?'on':''}" data-island="${m}">${t}</button>`).join('')}</div>${extra}`; }
 function renderBreak(){
   const q=quote(), F=R.fees;
   const stops=S.stops.map((s,i)=>`<div class="r"><input class="txt" data-stop="${i}:label" id="st-l-${i}" value="${esc(s.label)}" placeholder="Stop ${i+1} (e.g. shop)"><input class="ed s" inputmode="decimal" data-stop="${i}:km" id="st-k-${i}" value="${esc(s.km)}" placeholder="km"><button class="x" data-rmstop="${i}" aria-label="Remove stop">✕</button></div>`).join('');
@@ -572,6 +617,7 @@ function renderBreak(){
       <div class="r"><span class="n">Return<span class="calc">Last drop-off back to ${esc(base)}</span></span><span class="v">${num(q.back,1)} km</span></div>
       <div class="r"><span class="n">Total driven</span><span class="v fg">${num(q.driven,1)} km</span></div>
       <div class="r"><span class="n">Charge the return trip<span class="calc">customer price only; the return’s diesel is always in your cost</span></span><button class="sw" data-tog="ret" aria-pressed="${!!S.ret}" aria-label="Charge the return trip"></button></div>
+      ${islandBlock(q)}
       <button class="r add" id="saveRoute">＋ Save this route for next time</button>
     </div>
     ${routes?`<div class="glabel">Saved routes</div><div class="group">${routes}</div><div class="gnote">Tap a route to fill in its distances and tolls.</div>`:''}
@@ -610,7 +656,7 @@ function renderBreak(){
       <div class="r neg"><span class="n">Discount<span class="calc" data-out="discc"></span></span><span class="v" data-out="disc"></span></div>
       ${line('Adjustment','adj')}
       <div class="r"><span class="n">Minimum charge top-up<span class="calc">minimum ${peso(F.minCharge)}</span></span><span class="v" data-out="min"></span></div>
-      ${line('Tolls &amp; parking','tolls')}${line('VAT','vat')}
+      ${q.isl.inter?`<div class="r"><span class="n">Inter-island surcharge<span class="calc">${num(F.islandPct)}% + ${peso(F.islandFee)}</span></span><span class="v" data-out="isur"></span></div><div class="r"><span class="n">Ferry &amp; port fees<span class="calc">${+F.ferryBill?'charged to the customer at cost':'not charged to the customer'}</span></span><span class="v" data-out="fbill"></span></div>`:''}${line('Tolls &amp; parking','tolls')}${line('VAT','vat')}
       <div class="r big"><span class="n" style="font-weight:600">Total</span><span class="v" data-out="total"></span></div>
     </div>
     <div class="glabel">Job metrics</div>
@@ -633,8 +679,10 @@ $('#breakBody').addEventListener('input',e=>{
 });
 $('#breakBody').addEventListener('click',e=>{
   const tg=e.target.closest('[data-tog]'), ex=e.target.closest('[data-ex]'), ds=e.target.closest('[data-disc]'), rm=e.target.closest('[data-rmstop]');
-  const ro=e.target.closest('[data-route]'), rr=e.target.closest('[data-rmroute]');
-  if(ro){ const r=R.routes[+ro.dataset.route]; if(!r) return;
+  const ro=e.target.closest('[data-route]'), rr=e.target.closest('[data-rmroute]'), im=e.target.closest('[data-island]'), cx=e.target.closest('[data-cx]');
+  if(im){ S.island=im.dataset.island; if(S.island==='on'&&!S.ferryManual){ const q0=quote(), c0=q0.isl.plan.crossings.find(c=>c.route); S.ferryManual=c0?c0.route.name:((R.ferries.find(r=>r.name)||{}).name||''); S.crossings=String(q0.isl.plan.crossings.length||2); } }
+  else if(cx){ S.crossings=String(Math.max(1,(Math.floor(ev(S.crossings))||1)+(+cx.dataset.cx))); }
+  else if(ro){ const r=R.routes[+ro.dataset.route]; if(!r) return;
     Object.assign(S,{out:String(r.out||''),tow:String(r.tow||''),back:String(r.back||''),tolls:String(r.tolls||''),pickup:r.pickup||'',dropoff:r.dropoff||'',stops:clone(r.stops||[])});
     routeSure=null; toast(`<span class="ok">✓</span>${esc(r.name)} loaded`); }
   else if(rr){ const i=+rr.dataset.rmroute; if(routeSure!==i){ routeSure=i; renderBreak(); return; } R.routes.splice(i,1); routeSure=null; saveRates(); }
@@ -658,12 +706,22 @@ $('#breakBody').addEventListener('click',e=>{
   } else return;
   renderBreak(); render();
 });
+$('#breakBody').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.fpick!==undefined){ S.ferryPick={...(S.ferryPick||{}),[t.dataset.fpick]:t.value}; }
+  else if(t.dataset.fmanual!==undefined){ S.ferryManual=t.value; }
+  else if(t.dataset.s==='pickup'||t.dataset.s==='dropoff'||t.dataset.stop){ /* re-check islands once a place is typed */ }
+  else return;
+  render(); renderBreak();
+});
 $('#resetOv').addEventListener('click',()=>{ S.ov={}; S.adj=''; S.disc=''; S.extras={}; S.wait=''; S.tolls=''; S.stops=[]; S.vat=false; S.ret=true; S.price=''; S.shifts=''; renderBreak(); render(); });
 
 /* ---------- cost & profit ---------- */
 const itemCalc=(it,q)=>{ const d=it.detail||{};
   if(it.key==='fuel') return `${num(d.km,1)} km ÷ ${num(d.kmpl)} km/L = ${num(d.litres,2)} L × ${peso(d.diesel,2)}`;
   if(it.key==='tolls') return 'from the Breakdown';
+  if(it.key.startsWith('ferry:')){ const r=[...new Set(d.routes||[])].join(', ')||'no route';
+    return `${d.crossings} crossing${d.crossings>1?'s':''} · ${esc(r)}${it.key==='ferry:crew'?` · ${d.crewOn} crew`:''}`; }
   if(it.key.startsWith('crew:')) return `${d.shifts} shift${d.shifts>1?'s':''} × ${peso(d.perShift)} (${peso(d.basic)} basic + ${peso(d.meal)} meal)`;
   return d.basis==='km'?`${peso(d.rate,2)} per km × ${num(q.driven,1)} km`:'per trip'; };
 function profitOuts(q){
@@ -758,6 +816,7 @@ $('#profitBody').addEventListener('click',e=>{
 function factorGroup(){
   const f=[{key:'fuel',name:'Diesel',sub:'km driven ÷ km per litre × diesel price'},{key:'tolls',name:'Tolls & parking',sub:'entered per job'},
     ...R.crew.filter(c=>c.role).map(c=>({key:'crew:'+c.role,name:c.role,sub:`crew pay · ${peso((+c.basic||0)+(+c.meal||0))} per shift`})),
+    {key:'ferry:truck',name:'RoRo fare (truck)',sub:'inter-island jobs only'},{key:'ferry:crew',name:'Crew ferry fares',sub:'inter-island jobs only'},{key:'ferry:port',name:'Port & terminal fees',sub:'inter-island jobs only'},
     ...R.costLines.filter(l=>l.name).map(l=>({key:'line:'+l.name,name:l.name,sub:`${l.kind==='alloc'?'set aside':'cash'} · ${peso(l.amt,2)} ${l.basis==='km'?'per km':'per trip'}`}))];
   return `<div class="glabel">Cost factors to include</div><div class="group">${f.map(x=>{ const off=!!R.costOff[x.key];
     return `<div class="r ${off?'offrow':''}"><span class="n">${esc(x.name)}<span class="calc">${off?'off · not counted in the cost':esc(x.sub)}</span></span><button class="sw sm" data-offr="${esc(x.key)}" aria-pressed="${!off}" aria-label="Include ${esc(x.name)}"></button></div>`; }).join('')}</div>
@@ -769,6 +828,12 @@ function crewDayGroup(){ const on=!!+R.fees.crewByKm;
     <div class="r"><span class="n">Count crew days by distance<span class="calc">${on?'on':'off · days come from job hours ÷ shift length'}</span></span><button class="sw sm" data-crewkm aria-pressed="${on}" aria-label="Count crew days by distance"></button></div>
     <div class="r"><span class="n">Km per crew day<span class="calc">up to this many km driven = 1 day</span></span><input class="ed s" inputmode="decimal" id="fee-kmPerDay" data-fee="kmPerDay" value="${esc(R.fees.kmPerDay)}"><span class="s">km</span></div></div>
     <div class="gnote">When on, each block of km driven pays one more day for every crew member: with 180 km, 180 km = 1 day, 181–360 km = 2 days, 422.5 km = 3 days. A number of days typed on the Cost &amp; profit screen still wins.</div>`; }
+function islandGroup(){ const on=!!+R.fees.ferryBill;
+  return `<div class="glabel">Inter-island jobs</div><div class="group">
+    <div class="r"><span class="n">Charge ferry costs to the customer<span class="calc">${on?'on · truck fare, crew fares and port fees added to the price at cost':'off · ferry costs are yours only'}</span></span><button class="sw sm" data-ferrybill aria-pressed="${on}" aria-label="Charge ferry costs to the customer"></button></div>
+    <div class="r"><span class="n">Inter-island surcharge<span class="calc">% added on the service price</span></span><input class="ed s" inputmode="decimal" id="fee-islandPct" data-fee="islandPct" value="${esc(R.fees.islandPct)}"><span class="s">%</span></div>
+    <div class="r"><span class="n">Inter-island fee<span class="calc">fixed ₱ per inter-island job</span></span><input class="ed s" inputmode="decimal" id="fee-islandFee" data-fee="islandFee" value="${esc(R.fees.islandFee)}"><span class="s">₱</span></div></div>
+    <div class="gnote">A job is inter-island when the home base, pickup or drop-off are on different islands. The app reads the place names (type the province to be safe, e.g. "Catarman, Northern Samar"). Each job can be set to Auto, On or Off in the Breakdown. Ferry fares, crew fares and port fees go into your cost automatically and have their own on/off switches.</div>`; }
 function renderRates(){
   let html='';
   for(const [lk,L] of Object.entries(LISTS)){
@@ -781,6 +846,7 @@ function renderRates(){
         ${lk==='crew'?`<label class="full" style="color:var(--soft)">Per shift: ${peso((+it.basic||0)+(+it.meal||0))}</label>`:''}</div></div>`).join('');
     html+=`<div class="glabel">${L.label}</div><div class="group">${items}<button class="r add" data-addrow="${lk}">＋ ${L.add}</button></div>${L.note?`<div class="gnote">${L.note}</div>`:''}`;
   }
+  html+=islandGroup();
   html+=`<div class="glabel">Pricing, fuel, time &amp; fees</div><div class="group">${FEES.map(([k,lab,sub,ty])=>`<div class="r"><span class="n">${lab}<span class="calc">${sub}</span></span><input class="ed ${ty==='t'?'w':''}" ${ty==='t'?'':'inputmode="decimal"'} id="fee-${k}" data-fee="${k}" value="${esc(R.fees[k])}" ${k==='homeBase'?'placeholder="e.g. Maroroy, Daraga"':''}></div>`).join('')}</div>
     <div class="gnote">Saved jobs keep the prices, costs and rates they were quoted with.</div>
     <div class="glabel">This phone</div>
@@ -815,6 +881,8 @@ let delArm=null;
 $('#ratesBody').addEventListener('click',e=>{
   const d=e.target.closest('[data-del]'), ad=e.target.closest('[data-addrow]'), fo=e.target.closest('[data-offr]'), ck=e.target.closest('[data-crewkm]');
   if(ck){ R.fees.crewByKm=+R.fees.crewByKm?0:1; saveRates(); const y=$('#ratesBody').scrollTop; renderRates(); $('#ratesBody').scrollTop=y; render(); return; }
+  const fb=e.target.closest('[data-ferrybill]');
+  if(fb){ R.fees.ferryBill=+R.fees.ferryBill?0:1; saveRates(); const y=$('#ratesBody').scrollTop; renderRates(); $('#ratesBody').scrollTop=y; render(); return; }
   if(fo){ const k=fo.dataset.offr; if(R.costOff[k]) delete R.costOff[k]; else R.costOff[k]=true; saveRates(); const y=$('#ratesBody').scrollTop; renderRates(); $('#ratesBody').scrollTop=y; render(); return; }
   if(d){ if(delArm!==d.dataset.del){ delArm=d.dataset.del; d.textContent='Tap to confirm'; setTimeout(()=>{ if(delArm===d.dataset.del){ delArm=null; if(d.isConnected) d.textContent='Remove'; } },2500); return; }
     delArm=null; const [lk,i]=d.dataset.del.split(':'); R[lk].splice(+i,1); saveRates(true); renderRates(); render(); return; }
@@ -856,7 +924,7 @@ $('#bookBody').addEventListener('click',async e=>{
     unit:q.u.code+(q.u.name?' '+q.u.name:''),unitType:q.u.type,vehicle:q.v.name,condition:q.c.name,weather:q.w.name,night:q.night,holiday:!!S.holiday,
     kmOut:q.out,kmTowed:r2(q.loaded),kmBack:q.back,kmDriven:r2(q.driven),stops:S.stops.length,litres:r2(q.litres),
     tow:r2(q.run),fuel:r2(q.fuel),fees:r2(q.fees),discount:q.d?q.d.name:'',total:r2(q.total),status,
-    rateCard:r2(q.rateCard),priceManual:q.manual,vat:!!S.vat,netRevenue:r2(q.netRev),
+    rateCard:r2(q.rateCard),priceManual:q.manual,island:{mode:q.isl.mode,crossings:q.isl.crossings.map(c=>({leg:c.leg,from:c.from,to:c.to,route:c.route?{...c.route}:null})),surcharge:r2(q.islandSur),billed:r2(q.ferryBill)},vat:!!S.vat,netRevenue:r2(q.netRev),
     est:{items:q.est.items.map(i=>({key:i.key,name:i.name,kind:i.kind,amount:r2(i.amount),...(i.off?{off:true}:{})})),cash:r2(q.est.cash),alloc:r2(q.est.alloc),total:r2(q.est.total),litres:r2(q.est.litres),shifts:q.est.shifts,shiftBasis:q.est.shiftBasis,hours:r2(q.hours)},
     estProfit:r2(q.pl.profit),estMargin:q.pl.marginPct==null?null:r2(q.pl.marginPct),
     assump:{diesel:q.diesel,kmpl:q.kmpl,baseFee:q.baseFee,lkm:q.lkm,ekm:q.ekm,incl:q.incl,mult:q.mult,vatPct:+F.vat||0,markup:+F.markup||0,margin:+F.margin||0,shiftHours:+F.shiftHours||8,crewByKm:!!+F.crewByKm,kmPerDay:+F.kmPerDay||0,
@@ -891,7 +959,7 @@ function renderJobs(){
   const detail=b=>{
     const A=b.assump, est=b.est;
     const head=`<div style="padding:0 16px 10px;line-height:1.5" class="calc">${esc(b.vehicle)} · ${esc(b.condition)}${b.plate?' · '+esc(b.plate):''}<br>${b.pickup||b.dropoff?esc(b.homeBase?b.homeBase+' → ':'')+esc(b.pickup||'?')+' → '+esc(b.dropoff||'?')+'<br>':''}${num(b.kmDriven,1)} km driven (${num(b.kmOut,1)} + ${num(b.kmTowed,1)} + ${num(b.kmBack,1)})${b.phone?' · '+esc(b.phone):''}<br>`+
-      (est?`Quoted ${peso(b.total)}${b.priceManual?` (rate card ${peso(b.rateCard)})`:''} · est. cost ${peso(est.total)} · <span class="${b.estProfit<0?'bad':'good'}">est. profit ${peso(b.estProfit)} (${pct(b.estMargin)})</span><br>Diesel ${peso(A.diesel,2)}/L at ${num(A.kmpl)} km/L = ${num(est.litres,1)} L · ${est.shifts} crew ${est.shiftBasis==='km'?`day${est.shifts>1?'s':''} (by distance, ${num(A.kmPerDay)} km per day)`:`shift${est.shifts>1?'s':''}`}${est.items.some(i=>i.off)?'<br>Left out of the cost: '+est.items.filter(i=>i.off).map(i=>esc(i.name)).join(', '):''}`
+      (est?`Quoted ${peso(b.total)}${b.priceManual?` (rate card ${peso(b.rateCard)})`:''} · est. cost ${peso(est.total)} · <span class="${b.estProfit<0?'bad':'good'}">est. profit ${peso(b.estProfit)} (${pct(b.estMargin)})</span><br>Diesel ${peso(A.diesel,2)}/L at ${num(A.kmpl)} km/L = ${num(est.litres,1)} L · ${est.shifts} crew ${est.shiftBasis==='km'?`day${est.shifts>1?'s':''} (by distance, ${num(A.kmPerDay)} km per day)`:`shift${est.shifts>1?'s':''}`}${b.island&&b.island.crossings.length?`<br>⛴ Inter-island: ${b.island.crossings.length} sea crossing${b.island.crossings.length>1?'s':''} (${[...new Set(b.island.crossings.map(c=>c.route?c.route.name:'no route'))].map(esc).join(', ')})`:''}${est.items.some(i=>i.off)?'<br>Left out of the cost: '+est.items.filter(i=>i.off).map(i=>esc(i.name)).join(', '):''}`
           :`Quoted ${peso(b.total)} · saved before costs were tracked, so there’s no estimate`)+`</div>`;
     const segs=`<div class="segs" style="padding-top:0">${['Quoted','Dispatched','Completed','Cancelled'].map(s=>`<button class="seg ${b.status===s?'on':''}" data-status="${s}" data-for="${esc(b.ref)}">${s==='Dispatched'?'Dispatch':s==='Completed'?'Done':s==='Cancelled'?'Cancel':'Quote'}</button>`).join('')}<button class="seg del ${delSure===b.ref?'sure':''}" data-deljob="${esc(b.ref)}">${delSure===b.ref?'Delete?':'Delete'}</button></div>`;
     if(b.status!=='Dispatched'&&b.status!=='Completed') return head+segs;
@@ -928,11 +996,11 @@ $('#jobsBody').addEventListener('click',async e=>{
     const f=d=>{ const x=new Date(d),p=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${p(x.getMonth()+1)}-${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`; };
     const clean=s=>String(s??'').replace(/[\t\n]/g,' ');
     const head=['Ref','Date','Customer','Phone','Plate','Pickup','Drop-off','Unit','Unit type','Vehicle','Condition','Weather','Night','km to pickup','km towed','km return','km driven','Diesel L billed','Tow ₱','Fuel ₱','Fees ₱','Discount','Quoted ₱','Status',
-      'Rate card ₱','Diesel ₱/L','km/L','Diesel L used','Crew shifts','Est cash cost ₱','Est set aside ₱','Est cost ₱','Est profit ₱','Est margin %','Collected ₱','Actual cost ₱','Actual profit ₱','Costs still estimated'];
+      'Rate card ₱','Diesel ₱/L','km/L','Diesel L used','Crew shifts','Est cash cost ₱','Est set aside ₱','Est cost ₱','Est profit ₱','Est margin %','Collected ₱','Actual cost ₱','Actual profit ₱','Costs still estimated','Sea crossings','Ferry routes'];
     const tsv=[head.join('\t'),...[...jobs].reverse().map(b=>{ const a=jobActual(b), E=b.est, A=b.assump||{};
       return [b.ref,f(b.at),b.customer,b.phone,b.plate,b.pickup,b.dropoff,b.unit,b.unitType,b.vehicle,b.condition,b.weather,b.night?'Yes':'No',b.kmOut,b.kmTowed,b.kmBack,b.kmDriven,b.litres,b.tow,b.fuel,b.fees,b.discount,b.total,b.status,
         b.rateCard??'',A.diesel??'',A.kmpl??'',E?E.litres:'',E?E.shifts:'',E?E.cash:'',E?E.alloc:'',E?E.total:'',b.estProfit??'',b.estMargin??'',
-        a.collected??'',a.collected===null?'':r2(a.cost),a.profit===null?'':r2(a.profit),a.collected===null?'':a.pending].map(clean).join('\t'); })].join('\n');
+        a.collected??'',a.collected===null?'':r2(a.cost),a.profit===null?'':r2(a.profit),a.collected===null?'':a.pending,b.island?b.island.crossings.length:'',b.island?[...new Set(b.island.crossings.map(c=>c.route?c.route.name:''))].join(', '):''].map(clean).join('\t'); })].join('\n');
     try{ await navigator.clipboard.writeText(tsv); toast('<span class="ok">✓</span>Copied '+jobs.length+' jobs'); }
     catch(err){ const ta=document.createElement('textarea'); ta.value=tsv; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('Copied'); }catch(_){ toast('Copy not allowed here'); } ta.remove(); }
   }
